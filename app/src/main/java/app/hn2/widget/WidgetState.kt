@@ -45,6 +45,9 @@ fun decodeWidgetStories(raw: String?): List<WidgetStory> =
 /** Hacker News orange: the "HN" in the header, and rank numbers when that setting is on. */
 val HnOrange = Color(0xFFFF6600)
 
+/** "01", "02", …: a story's place in the list. */
+fun rankLabel(rank: Int): String = rank.toString().padStart(2, '0')
+
 /** "65 pts · 25 comments · example.com" */
 fun WidgetStory.meta(): String = listOfNotNull("$score pts", "$comments comments", domain).joinToString(" · ")
 
@@ -65,9 +68,9 @@ enum class WidgetTheme(
 
 /** Text sizes, in sp, for the widget's header, rank numbers, story titles and points/comments line. */
 enum class WidgetTextSize(val label: String, val header: Int, val rank: Int, val title: Int, val meta: Int) {
-    SMALL("Small", 11, 20, 13, 10),
-    MEDIUM("Medium", 12, 22, 14, 11),
-    LARGE("Large", 13, 24, 15, 12);
+    SMALL("Small", 13, 22, 13, 10),
+    MEDIUM("Medium", 14, 24, 14, 11),
+    LARGE("Large", 15, 26, 15, 12);
 
     companion object {
         fun fromName(name: String?): WidgetTextSize = entries.firstOrNull { it.name == name } ?: MEDIUM

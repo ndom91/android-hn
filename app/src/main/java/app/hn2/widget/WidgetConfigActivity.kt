@@ -296,11 +296,17 @@ private fun WidgetPreview(settings: WidgetSettings, stories: List<WidgetStory>) 
     val theme = settings.theme
     val sizes = settings.textSize
     val rankColor = if (settings.orangeRanks) HnOrange else theme.text
-    fun style(size: Int, color: Color, mono: Boolean = false, bold: Boolean = false) = TextStyle(
+    // The widget draws its header and ranks in the bundled JetBrains Mono, and its meta line
+    // in the phone's monospace font; [mono] picks the first, [systemMono] the second.
+    fun style(size: Int, color: Color, mono: Boolean = false, bold: Boolean = false, systemMono: Boolean = false) = TextStyle(
         color = color,
         fontSize = size.sp,
         lineHeight = (size * 1.3f).sp,
-        fontFamily = if (mono) FontFamily.Monospace else null,
+        fontFamily = when {
+            mono -> JetBrainsMono
+            systemMono -> FontFamily.Monospace
+            else -> null
+        },
         fontWeight = if (bold) FontWeight.Bold else null,
     )
 
@@ -327,7 +333,7 @@ private fun WidgetPreview(settings: WidgetSettings, stories: List<WidgetStory>) 
                     Text(" / ", style = style(sizes.header, theme.secondary, mono = true))
                     Text(settings.section.name, style = style(sizes.header, theme.text, mono = true, bold = true))
                 }
-                Text("12:34", style = style(sizes.header, theme.secondary, mono = true))
+                Text("12:34", style = style(sizes.header - 1, theme.secondary, mono = true))
                 Icon(
                     painterResource(R.drawable.ic_refresh),
                     contentDescription = null,
@@ -338,15 +344,16 @@ private fun WidgetPreview(settings: WidgetSettings, stories: List<WidgetStory>) 
             stories.take(3).forEachIndexed { index, story ->
                 Row(Modifier.fillMaxWidth().padding(vertical = settings.spacing.story.dp)) {
                     Text(
-                        (index + 1).toString().padStart(2, '0'),
+                        rankLabel(index + 1),
                         style = style(sizes.rank, rankColor, mono = true),
-                        modifier = Modifier.width((sizes.rank * 1.25f + 10).dp),
+                        // JetBrains Mono digits are 0.6em wide; the widget measures "00" the same way.
+                        modifier = Modifier.width((sizes.rank * 1.2f + 10).dp),
                     )
                     Column(Modifier.weight(1f)) {
                         Text(story.title, style = style(sizes.title, theme.text, bold = true), maxLines = 2, overflow = TextOverflow.Ellipsis)
                         Text(
                             story.meta(),
-                            style = style(sizes.meta, theme.secondary, mono = true),
+                            style = style(sizes.meta, theme.secondary, systemMono = true),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.padding(top = 2.dp),

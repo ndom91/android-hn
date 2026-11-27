@@ -71,12 +71,7 @@ private fun WidgetContent(prefs: Preferences) {
     val loading = prefs[WidgetKeys.loading] == true
     val error = prefs[WidgetKeys.error]
     val updatedAt = prefs[WidgetKeys.updatedAt]
-    fun mono(size: Int, color: Color, bold: Boolean = false) = TextStyle(
-        color = ColorProvider(color),
-        fontSize = size.sp,
-        fontFamily = FontFamily.Monospace,
-        fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal,
-    )
+    val mono = MonoText(context)
 
     Column(
         GlanceModifier
@@ -90,14 +85,24 @@ private fun WidgetContent(prefs: Preferences) {
             GlanceModifier.fillMaxWidth().padding(top = spacing.header.dp + 6.dp, bottom = spacing.header.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Row(
+            val header = mono.draw(
+                listOf(
+                    MonoRun("HN", HnOrange, bold = true),
+                    MonoRun(" / ", theme.secondary),
+                    MonoRun(section.name, theme.text, bold = true),
+                ),
+                sizes.header,
+            )
+            Box(
                 GlanceModifier
                     .defaultWeight()
                     .clickable(actionStartActivity(MainActivity.intent(context, section))),
             ) {
-                Text("HN", style = mono(sizes.header, HnOrange, bold = true))
-                Text(" / ", style = mono(sizes.header, theme.secondary))
-                Text(section.name, style = mono(sizes.header, theme.text, bold = true), maxLines = 1)
+                Image(
+                    provider = ImageProvider(header.bitmap),
+                    contentDescription = "Hacker News, ${section.title}",
+                    modifier = GlanceModifier.size(header.widthDp.dp, header.heightDp.dp),
+                )
             }
             val status = when {
                 loading -> "…"
@@ -105,7 +110,14 @@ private fun WidgetContent(prefs: Preferences) {
                 updatedAt != null -> DateFormat.getTimeFormat(context).format(Date(updatedAt))
                 else -> ""
             }
-            Text(status, style = mono(sizes.header, theme.secondary))
+            if (status.isNotEmpty()) {
+                val time = mono.draw(listOf(MonoRun(status, theme.secondary)), sizes.header - 1)
+                Image(
+                    provider = ImageProvider(time.bitmap),
+                    contentDescription = status,
+                    modifier = GlanceModifier.size(time.widthDp.dp, time.heightDp.dp),
+                )
+            }
             Image(
                 provider = ImageProvider(R.drawable.ic_refresh),
                 contentDescription = "Refresh",
@@ -125,9 +137,12 @@ private fun WidgetContent(prefs: Preferences) {
                 )
             }
         } else {
+            // Every rank is as wide as "00", so the titles all start at the same place.
+            val rankWidth = mono.draw(listOf(MonoRun("00", theme.text)), sizes.rank).widthDp + 10
             LazyColumn {
                 itemsIndexed(stories, itemId = { _, story -> story.id }) { index, story ->
-                    StoryItem(index + 1, story, theme, sizes, spacing, rankColor)
+                    val rank = mono.draw(listOf(MonoRun(rankLabel(index + 1), Color.White)), sizes.rank, mask = true)
+                    StoryItem(rank, rankWidth, story, theme, sizes, spacing, rankColor)
                 }
             }
         }
@@ -137,7 +152,8 @@ private fun WidgetContent(prefs: Preferences) {
 /** One story: a big rank number, then the title and a points · comments · site line. */
 @Composable
 private fun StoryItem(
-    rank: Int,
+    rank: MonoImage,
+    rankWidth: Float,
     story: WidgetStory,
     theme: WidgetTheme,
     sizes: WidgetTextSize,
@@ -150,12 +166,14 @@ private fun StoryItem(
             .padding(vertical = spacing.story.dp)
             .clickable(actionStartActivity<ItemActivity>(actionParametersOf(ItemIdKey to story.id))),
     ) {
-        Text(
-            rank.toString().padStart(2, '0'),
-            style = TextStyle(color = ColorProvider(rankColor), fontSize = sizes.rank.sp, fontFamily = FontFamily.Monospace),
-            // Two monospace digits plus a gap, so every title starts at the same place.
-            modifier = GlanceModifier.width((sizes.rank * 1.25f + 10).dp),
-        )
+        Box(GlanceModifier.width(rankWidth.dp)) {
+            Image(
+                provider = ImageProvider(rank.bitmap),
+                contentDescription = null,
+                colorFilter = ColorFilter.tint(ColorProvider(rankColor)),
+                modifier = GlanceModifier.size(rank.widthDp.dp, rank.heightDp.dp),
+            )
+        }
         Column(GlanceModifier.defaultWeight()) {
             Text(
                 story.title,
