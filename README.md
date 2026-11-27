@@ -18,6 +18,19 @@ hn2 is a modern take on [Materialistic](https://github.com/hidroh/materialistic)
 maintained since 2019. It keeps what made Materialistic great, a glanceable widget and a two-tab
 article and comments view, and rebuilds everything else with Material You.
 
+<table>
+  <tr>
+    <td align="center" width="33%"><img src="docs/screenshots/widget.jpg" alt="The hn2 widget on a home screen, listing top stories"></td>
+    <td align="center" width="33%"><img src="docs/screenshots/comments.jpg" alt="A comment thread with a reply hanging off a thread line"></td>
+    <td align="center" width="33%"><img src="docs/screenshots/article.jpg" alt="An article open in the in-app browser"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Top stories on your home screen</sub></td>
+    <td align="center"><sub>Threaded comments</sub></td>
+    <td align="center"><sub>The article, one swipe away</sub></td>
+  </tr>
+</table>
+
 ## Get started
 
 1. On your Android phone, tap **[Download APK](https://github.com/ndom91/android-hn/releases/latest/download/hn2-debug.apk)**.
