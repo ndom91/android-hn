@@ -68,9 +68,9 @@ enum class WidgetTheme(
 
 /** Text sizes, in sp, for the widget's header, rank numbers, story titles and points/comments line. */
 enum class WidgetTextSize(val label: String, val header: Int, val rank: Int, val title: Int, val meta: Int) {
-    SMALL("Small", 13, 22, 13, 10),
-    MEDIUM("Medium", 14, 24, 14, 11),
-    LARGE("Large", 15, 26, 15, 12);
+    SMALL("Small", 15, 22, 13, 10),
+    MEDIUM("Medium", 16, 24, 14, 11),
+    LARGE("Large", 17, 26, 15, 12);
 
     companion object {
         fun fromName(name: String?): WidgetTextSize = entries.firstOrNull { it.name == name } ?: MEDIUM

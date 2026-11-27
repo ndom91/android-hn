@@ -114,7 +114,7 @@ private fun WidgetContent(prefs: Preferences) {
                 else -> ""
             }
             if (status.isNotEmpty()) {
-                val time = mono.draw(listOf(MonoRun(status, theme.secondary)), sizes.header - 1)
+                val time = mono.draw(listOf(MonoRun(status, theme.secondary)), sizes.header - 3)
                 Image(
                     provider = ImageProvider(time.bitmap),
                     contentDescription = status,
