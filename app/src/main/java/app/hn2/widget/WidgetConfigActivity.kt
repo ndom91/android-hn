@@ -333,7 +333,7 @@ private fun WidgetPreview(settings: WidgetSettings, stories: List<WidgetStory>) 
                     Text(" / ", style = style(sizes.header, theme.secondary, mono = true))
                     Text(settings.section.name, style = style(sizes.header, theme.text, mono = true, bold = true))
                 }
-                Text("12:34", style = style(sizes.header - 1, theme.secondary, mono = true))
+                Text("12:34", style = style(sizes.header - 3, theme.secondary, mono = true))
                 Icon(
                     painterResource(R.drawable.ic_refresh),
                     contentDescription = null,
