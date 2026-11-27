@@ -1,12 +1,14 @@
 package app.hn2.data
 
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import okhttp3.Call
+import okhttp3.Callback
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.Response
 import java.io.IOException
 
 /**
@@ -19,23 +21,38 @@ class HnApi(private val client: OkHttpClient) {
     private val json = Json { ignoreUnknownKeys = true; coerceInputValues = true }
 
     suspend fun storyIds(section: Section): List<Long> =
-        json.decodeFromString(get("$FIREBASE/${section.endpoint}.json"))
+        get("$FIREBASE/${section.endpoint}.json") { json.decodeFromString(it) }
 
     /** Returns null for items the API reports as missing. */
-    suspend fun item(id: Long): Story? {
-        val body = get("$FIREBASE/item/$id.json")
-        if (body.isBlank() || body == "null") return null
-        return json.decodeFromString<Story>(body)
-    }
+    suspend fun item(id: Long): Story? =
+        get("$FIREBASE/item/$id.json") { body ->
+            if (body.isBlank() || body == "null") null else json.decodeFromString<Story>(body)
+        }
 
     suspend fun commentTree(id: Long): AlgoliaItem =
-        json.decodeFromString(get("$ALGOLIA/items/$id"))
+        get("$ALGOLIA/items/$id") { json.decodeFromString(it) }
 
-    private suspend fun get(url: String): String = withContext(Dispatchers.IO) {
-        client.newCall(Request.Builder().url(url).build()).execute().use { response ->
-            if (!response.isSuccessful) throw IOException("HTTP ${response.code} for $url")
-            response.body?.string().orEmpty()
-        }
+    /**
+     * Fetches [url] and parses the body on OkHttp's background thread, so big comment trees never
+     * parse on the main thread. Cancelling the coroutine cancels the call: switching sections or
+     * leaving a story stops its requests instead of letting them finish unused.
+     */
+    private suspend fun <T> get(url: String, parse: (String) -> T): T = suspendCancellableCoroutine { cont ->
+        val call = client.newCall(Request.Builder().url(url).build())
+        cont.invokeOnCancellation { call.cancel() }
+        call.enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) = cont.resumeWith(Result.failure(e))
+
+            override fun onResponse(call: Call, response: Response) {
+                val result = runCatching {
+                    response.use {
+                        if (!it.isSuccessful) throw IOException("HTTP ${it.code} for $url")
+                        parse(it.body?.string().orEmpty())
+                    }
+                }
+                cont.resumeWith(result)
+            }
+        })
     }
 
     companion object {

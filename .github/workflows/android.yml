@@ -3,7 +3,10 @@ name: Android
 on:
   push:
     branches: [main]
+    # Docs-only pushes don't change the APK, so they don't build or release.
+    paths-ignore: ['**.md', 'docs/**']
   pull_request:
+    paths-ignore: ['**.md', 'docs/**']
   workflow_dispatch:
 
 concurrency:

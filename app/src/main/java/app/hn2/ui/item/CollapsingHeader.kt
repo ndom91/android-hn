@@ -27,10 +27,6 @@ class CollapsingHeaderState {
     /** 0 when fully expanded, 1 when fully collapsed. */
     val collapsedFraction: Float get() = if (maxHeight == 0f) 0f else -offset / maxHeight
 
-    fun expand() {
-        offset = 0f
-    }
-
     val nestedScrollConnection = object : NestedScrollConnection {
         override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset =
             if (available.y < 0) Offset(0f, consume(available.y)) else Offset.Zero

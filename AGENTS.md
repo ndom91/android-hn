@@ -78,7 +78,7 @@ row flattening, HTML parsing, formatting) out of composables so it stays testabl
 requests and by hand. It builds the debug APK, runs the unit tests and uploads the APK as a workflow
 artifact.
 
-Every push to `main` is also a release. CI takes the newest `vX.Y.Z` tag, bumps the patch number
+Every push to `main` that changes more than docs (`*.md`, `docs/`) is also a release. CI takes the newest `vX.Y.Z` tag, bumps the patch number
 (0.1.0, 0.1.1, ...), writes that into `versionName` in `app/build.gradle.kts`, builds, and publishes
 a GitHub release `vX.Y.Z` titled "hn2 X.Y.Z" with the APK as `hn2-debug.apk`, marked as the repo's
 latest release. It then commits the new `versionName` back to `main` as "Release X.Y.Z [skip ci]",

@@ -26,13 +26,16 @@ class StoryListViewModel(private val repository: HnRepository, initial: Section)
     val state: StateFlow<StoryListState> = _state.asStateFlow()
     private var loadJob: Job? = null
 
+    /** Each section's last loaded stories, shown right away when switching back while it refreshes. */
+    private val loaded = mutableMapOf<Section, List<Story>>()
+
     init {
         refresh()
     }
 
     fun select(section: Section) {
         if (section == _state.value.section) return
-        _state.update { it.copy(section = section, stories = emptyList()) }
+        _state.update { it.copy(section = section, stories = loaded[section].orEmpty()) }
         refresh()
     }
 
@@ -42,7 +45,10 @@ class StoryListViewModel(private val repository: HnRepository, initial: Section)
         _state.update { it.copy(loading = true, error = null) }
         loadJob = viewModelScope.launch {
             runSuspendCatching { repository.stories(section) }
-                .onSuccess { stories -> _state.update { it.copy(stories = stories, loading = false) } }
+                .onSuccess { stories ->
+                    loaded[section] = stories
+                    _state.update { it.copy(stories = stories, loading = false) }
+                }
                 .onFailure { error ->
                     _state.update { it.copy(loading = false, error = error.message ?: "Couldn't load stories") }
                 }
