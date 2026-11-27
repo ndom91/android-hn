@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A widget story's "pts · comments · site" line, in the bundled JetBrains Mono. -->
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/meta"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:ellipsize="end"
+    android:fontFamily="@font/jetbrains_mono_regular"
+    android:maxLines="1" />

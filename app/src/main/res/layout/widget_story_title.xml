@@ -1,13 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  A widget story title. It's a plain TextView, not a Glance Text, so it can be bold on any phone:
-  Glance asks for font weight 700, which a font with no bold weight ignores, while textStyle="bold"
-  thickens the regular font itself when there's no bold one.
+  A widget story title. Glance can only use the phone's fonts, and phones with a custom system font
+  may have no bold at all, so the title is a plain TextView set in the bundled Inter Bold.
 -->
 <TextView xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/title"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:ellipsize="end"
-    android:maxLines="2"
-    android:textStyle="bold" />
+    android:fontFamily="@font/inter_bold"
+    android:maxLines="2" />

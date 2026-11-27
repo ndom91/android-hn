@@ -40,7 +40,6 @@ import androidx.glance.layout.padding
 import androidx.glance.layout.size
 import androidx.glance.layout.width
 import androidx.glance.state.PreferencesGlanceStateDefinition
-import androidx.glance.text.FontFamily
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
@@ -178,21 +177,26 @@ private fun StoryItem(
             )
         }
         Column(GlanceModifier.defaultWeight()) {
-            AndroidRemoteViews(storyTitle(LocalContext.current, story.title, theme.text, sizes.title), GlanceModifier.fillMaxWidth())
-            Text(
-                story.meta(),
-                style = TextStyle(color = ColorProvider(theme.secondary), fontSize = sizes.meta.sp, fontFamily = FontFamily.Monospace),
-                maxLines = 1,
-                modifier = GlanceModifier.padding(top = 2.dp),
+            val context = LocalContext.current
+            AndroidRemoteViews(
+                bundledFontText(context, R.layout.widget_story_title, R.id.title, story.title, theme.text, sizes.title),
+                GlanceModifier.fillMaxWidth(),
+            )
+            AndroidRemoteViews(
+                bundledFontText(context, R.layout.widget_story_meta, R.id.meta, story.meta(), theme.secondary, sizes.meta),
+                GlanceModifier.fillMaxWidth().padding(top = 2.dp),
             )
         }
     }
 }
 
-/** A bold story title from `widget_story_title.xml`; see there for why it isn't a Glance Text. */
-private fun storyTitle(context: Context, title: String, color: Color, sizeSp: Int) =
-    RemoteViews(context.packageName, R.layout.widget_story_title).apply {
-        setTextViewText(R.id.title, title)
-        setTextColor(R.id.title, color.toArgb())
-        setTextViewTextSize(R.id.title, TypedValue.COMPLEX_UNIT_SP, sizeSp.toFloat())
+/**
+ * Text in one of the app's bundled fonts. Glance's Text can only use the phone's fonts, so this
+ * fills in a TextView [layout] whose `android:fontFamily` names the bundled font.
+ */
+private fun bundledFontText(context: Context, layout: Int, viewId: Int, text: String, color: Color, sizeSp: Int) =
+    RemoteViews(context.packageName, layout).apply {
+        setTextViewText(viewId, text)
+        setTextColor(viewId, color.toArgb())
+        setTextViewTextSize(viewId, TypedValue.COMPLEX_UNIT_SP, sizeSp.toFloat())
     }
