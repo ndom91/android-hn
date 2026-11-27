@@ -65,9 +65,12 @@ row flattening, HTML parsing, formatting) out of composables so it stays testabl
 ## Conventions and gotchas
 
 - **The widget's look is final.** Don't change its layout, colors or text sizes without being asked.
-  Its themes, text sizes and spacings live in `widget/WidgetState.kt`, separate from the app theme;
-  the widget settings screen picks one of each. "Large" text and "Relaxed" spacing are the
-  widget's original, roomier look.
+  Its layout follows the designer's "D2" mockup: an "HN / TOP" header, big zero-padded rank
+  numbers (white, or HN orange with the "Rank numbers" setting), bold two-line titles and a
+  monospaced points · comments · site line, with no dividers. Themes, text sizes and spacings
+  live in `widget/WidgetState.kt`, separate from the app theme, and the widget settings screen
+  picks one of each. Its preview (`WidgetPreview`) redraws the widget in Compose, so keep the
+  two in step.
 - **Widget taps and `ItemActivity` share an extra name.** The widget passes the story ID as an
   action parameter whose key is `ItemActivity.EXTRA_ITEM_ID`. Change both together.
 - **Never put the article WebView inside another scroll container.** It is `match_parent` and

@@ -22,7 +22,7 @@ import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.lazy.LazyColumn
-import androidx.glance.appwidget.lazy.items
+import androidx.glance.appwidget.lazy.itemsIndexed
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
 import androidx.glance.currentState
@@ -32,10 +32,12 @@ import androidx.glance.layout.Column
 import androidx.glance.layout.Row
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
-import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.layout.size
+import androidx.glance.layout.width
 import androidx.glance.state.PreferencesGlanceStateDefinition
+import androidx.glance.text.FontFamily
+import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
@@ -43,8 +45,6 @@ import app.hn2.R
 import app.hn2.data.Section
 import app.hn2.ui.item.ItemActivity
 import app.hn2.ui.list.MainActivity
-import app.hn2.util.isHotComments
-import app.hn2.util.isHotScore
 import java.util.Date
 
 val ItemIdKey = ActionParameters.Key<Long>(ItemActivity.EXTRA_ITEM_ID)
@@ -64,97 +64,110 @@ private fun WidgetContent(prefs: Preferences) {
     val context = LocalContext.current
     val section = Section.fromName(prefs[WidgetKeys.section])
     val theme = WidgetTheme.fromName(prefs[WidgetKeys.theme])
-    val textSize = WidgetTextSize.fromName(prefs[WidgetKeys.textSize])
+    val sizes = WidgetTextSize.fromName(prefs[WidgetKeys.textSize])
     val spacing = WidgetSpacing.fromName(prefs[WidgetKeys.spacing])
+    val rankColor = if (prefs[WidgetKeys.orangeRanks] == true) HnOrange else theme.text
     val stories = decodeWidgetStories(prefs[WidgetKeys.stories])
     val loading = prefs[WidgetKeys.loading] == true
     val error = prefs[WidgetKeys.error]
     val updatedAt = prefs[WidgetKeys.updatedAt]
+    fun mono(size: Int, color: Color, bold: Boolean = false) = TextStyle(
+        color = ColorProvider(color),
+        fontSize = size.sp,
+        fontFamily = FontFamily.Monospace,
+        fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal,
+    )
 
     Column(
         GlanceModifier
             .fillMaxSize()
-            .cornerRadius(16.dp)
+            .cornerRadius(20.dp)
             .background(theme.background)
-            .padding(horizontal = 12.dp),
+            .padding(horizontal = 14.dp),
     ) {
+        // "HN / TOP": which list this widget shows. Tapping it opens that list in the app.
         Row(
-            GlanceModifier.fillMaxWidth().padding(vertical = spacing.header.dp),
+            GlanceModifier.fillMaxWidth().padding(top = spacing.header.dp + 6.dp, bottom = spacing.header.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                section.title.uppercase(),
-                style = TextStyle(color = ColorProvider(theme.text), fontSize = textSize.header.sp),
-                maxLines = 1,
-                modifier = GlanceModifier
+            Row(
+                GlanceModifier
                     .defaultWeight()
                     .clickable(actionStartActivity(MainActivity.intent(context, section))),
-            )
+            ) {
+                Text("HN", style = mono(sizes.header, HnOrange, bold = true))
+                Text(" / ", style = mono(sizes.header, theme.secondary))
+                Text(section.name, style = mono(sizes.header, theme.text, bold = true), maxLines = 1)
+            }
             val status = when {
                 loading -> "…"
                 error != null -> "offline"
                 updatedAt != null -> DateFormat.getTimeFormat(context).format(Date(updatedAt))
                 else -> ""
             }
-            Text(status, style = TextStyle(color = ColorProvider(theme.secondary), fontSize = textSize.meta.sp))
+            Text(status, style = mono(sizes.header, theme.secondary))
             Image(
                 provider = ImageProvider(R.drawable.ic_refresh),
                 contentDescription = "Refresh",
                 colorFilter = ColorFilter.tint(ColorProvider(theme.text)),
                 modifier = GlanceModifier
-                    .size(40.dp)
-                    .padding(8.dp)
+                    .size(36.dp)
+                    .padding(start = 8.dp, top = 8.dp, bottom = 8.dp, end = 0.dp)
                     .clickable(actionRunCallback<RefreshAction>()),
             )
         }
-        Divider(theme.divider)
 
         if (stories.isEmpty()) {
             Box(GlanceModifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(
                     if (error != null && !loading) "Couldn't load stories. Tap refresh." else "Loading…",
-                    style = TextStyle(color = ColorProvider(theme.secondary), fontSize = 14.sp),
+                    style = TextStyle(color = ColorProvider(theme.secondary), fontSize = sizes.title.sp),
                 )
             }
         } else {
             LazyColumn {
-                items(stories, itemId = { it.id }) { story ->
-                    StoryItem(story, theme, textSize, spacing, section.hotThreshold)
+                itemsIndexed(stories, itemId = { _, story -> story.id }) { index, story ->
+                    StoryItem(index + 1, story, theme, sizes, spacing, rankColor)
                 }
             }
         }
     }
 }
 
+/** One story: a big rank number, then the title and a points · comments · site line. */
 @Composable
 private fun StoryItem(
+    rank: Int,
     story: WidgetStory,
     theme: WidgetTheme,
-    textSize: WidgetTextSize,
+    sizes: WidgetTextSize,
     spacing: WidgetSpacing,
-    hotThreshold: Int,
+    rankColor: Color,
 ) {
-    fun meta(hot: Boolean) =
-        TextStyle(color = ColorProvider(if (hot) HotOrange else theme.secondary), fontSize = textSize.meta.sp)
-    Column(GlanceModifier.fillMaxWidth()) {
-        Column(
-            GlanceModifier
-                .fillMaxWidth()
-                .padding(vertical = spacing.story.dp)
-                .clickable(actionStartActivity<ItemActivity>(actionParametersOf(ItemIdKey to story.id))),
-        ) {
-            Text(story.title, style = TextStyle(color = ColorProvider(theme.text), fontSize = textSize.title.sp), maxLines = 3)
-            Row {
-                Text("${story.score}p", style = meta(isHotScore(story.score, hotThreshold)))
-                Text(" - ", style = meta(false))
-                Text("${story.comments}c", style = meta(isHotComments(story.comments, hotThreshold)))
-            }
+    Row(
+        GlanceModifier
+            .fillMaxWidth()
+            .padding(vertical = spacing.story.dp)
+            .clickable(actionStartActivity<ItemActivity>(actionParametersOf(ItemIdKey to story.id))),
+    ) {
+        Text(
+            rank.toString().padStart(2, '0'),
+            style = TextStyle(color = ColorProvider(rankColor), fontSize = sizes.rank.sp, fontFamily = FontFamily.Monospace),
+            // Two monospace digits plus a gap, so every title starts at the same place.
+            modifier = GlanceModifier.width((sizes.rank * 1.25f + 10).dp),
+        )
+        Column(GlanceModifier.defaultWeight()) {
+            Text(
+                story.title,
+                style = TextStyle(color = ColorProvider(theme.text), fontSize = sizes.title.sp, fontWeight = FontWeight.Bold),
+                maxLines = 2,
+            )
+            Text(
+                story.meta(),
+                style = TextStyle(color = ColorProvider(theme.secondary), fontSize = sizes.meta.sp, fontFamily = FontFamily.Monospace),
+                maxLines = 1,
+                modifier = GlanceModifier.padding(top = 2.dp),
+            )
         }
-        Divider(theme.divider)
     }
-}
-
-@Composable
-private fun Divider(color: Color) {
-    Box(GlanceModifier.fillMaxWidth().height(1.dp).background(color)) {}
 }

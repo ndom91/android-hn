@@ -20,8 +20,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -37,6 +40,7 @@ import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -50,7 +54,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -63,8 +70,6 @@ import androidx.lifecycle.lifecycleScope
 import app.hn2.R
 import app.hn2.data.Section
 import app.hn2.ui.theme.Hn2Theme
-import app.hn2.util.isHotComments
-import app.hn2.util.isHotScore
 import kotlinx.coroutines.launch
 
 /** Widget settings, when placing the widget or later from its long-press menu. */
@@ -89,6 +94,7 @@ class WidgetConfigActivity : ComponentActivity() {
                 theme = WidgetTheme.fromName(prefs[WidgetKeys.theme]),
                 textSize = WidgetTextSize.fromName(prefs[WidgetKeys.textSize]),
                 spacing = WidgetSpacing.fromName(prefs[WidgetKeys.spacing]),
+                orangeRanks = prefs[WidgetKeys.orangeRanks] == true,
             )
             // Preview with the stories the widget is showing, or examples for a new one.
             val stories = decodeWidgetStories(prefs[WidgetKeys.stories]).ifEmpty { SampleStories }
@@ -112,6 +118,7 @@ class WidgetConfigActivity : ComponentActivity() {
                 state[WidgetKeys.theme] = settings.theme.name
                 state[WidgetKeys.textSize] = settings.textSize.name
                 state[WidgetKeys.spacing] = settings.spacing.name
+                state[WidgetKeys.orangeRanks] = settings.orangeRanks
                 if (settings.section != previous) {
                     state.remove(WidgetKeys.stories)
                     state[WidgetKeys.loading] = true
@@ -130,12 +137,13 @@ private data class WidgetSettings(
     val theme: WidgetTheme,
     val textSize: WidgetTextSize,
     val spacing: WidgetSpacing,
+    val orangeRanks: Boolean,
 )
 
 private val SampleStories = listOf(
-    WidgetStory(1, "Show HN: A tiny Hacker News widget for your home screen", 412, 138),
-    WidgetStory(2, "The unreasonable effectiveness of plain text", 96, 41),
-    WidgetStory(3, "Why we moved our build system back to Make", 251, 230),
+    WidgetStory(1, "Show HN: A tiny Hacker News widget for your home screen", 412, 138, "github.com"),
+    WidgetStory(2, "The unreasonable effectiveness of plain text", 96, 41, "example.com"),
+    WidgetStory(3, "Ask HN: What's your favorite home-screen widget?", 251, 230),
 )
 
 /** A stand-in wallpaper behind the previews, so the transparent theme reads as transparent. */
@@ -154,7 +162,8 @@ private fun ConfigScreen(
     var theme by rememberSaveable { mutableStateOf(initial.theme) }
     var textSize by rememberSaveable { mutableStateOf(initial.textSize) }
     var spacing by rememberSaveable { mutableStateOf(initial.spacing) }
-    val settings = WidgetSettings(section, theme, textSize, spacing)
+    var orangeRanks by rememberSaveable { mutableStateOf(initial.orangeRanks) }
+    val settings = WidgetSettings(section, theme, textSize, spacing, orangeRanks)
 
     Scaffold(
         topBar = {
@@ -200,6 +209,17 @@ private fun ConfigScreen(
                         WidgetTheme.entries.forEach {
                             ThemeSwatch(it, selected = it == theme, onClick = { theme = it }, modifier = Modifier.weight(1f))
                         }
+                    }
+                }
+                Setting("Rank numbers") {
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .toggleable(value = orangeRanks, role = Role.Switch, onValueChange = { orangeRanks = it }),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text("In HN orange", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                        Switch(checked = orangeRanks, onCheckedChange = null)
                     }
                 }
                 Setting("Text size") {
@@ -275,7 +295,14 @@ private fun ThemeSwatch(theme: WidgetTheme, selected: Boolean, onClick: () -> Un
 private fun WidgetPreview(settings: WidgetSettings, stories: List<WidgetStory>) {
     val theme = settings.theme
     val sizes = settings.textSize
-    fun style(size: Int, color: Color) = TextStyle(color = color, fontSize = size.sp, lineHeight = (size * 1.3f).sp)
+    val rankColor = if (settings.orangeRanks) HnOrange else theme.text
+    fun style(size: Int, color: Color, mono: Boolean = false, bold: Boolean = false) = TextStyle(
+        color = color,
+        fontSize = size.sp,
+        lineHeight = (size * 1.3f).sp,
+        fontFamily = if (mono) FontFamily.Monospace else null,
+        fontWeight = if (bold) FontWeight.Bold else null,
+    )
 
     Box(
         Modifier
@@ -287,43 +314,47 @@ private fun WidgetPreview(settings: WidgetSettings, stories: List<WidgetStory>) 
         Column(
             Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(16.dp))
+                .clip(RoundedCornerShape(20.dp))
                 .background(theme.background)
-                .padding(horizontal = 12.dp),
+                .padding(horizontal = 14.dp),
         ) {
-            Row(Modifier.fillMaxWidth().padding(vertical = settings.spacing.header.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    settings.section.title.uppercase(),
-                    style = style(sizes.header, theme.text),
-                    maxLines = 1,
-                    modifier = Modifier.weight(1f),
-                )
-                Text("12:34", style = style(sizes.meta, theme.secondary))
+            Row(
+                Modifier.fillMaxWidth().padding(top = settings.spacing.header.dp + 6.dp, bottom = settings.spacing.header.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Row(Modifier.weight(1f)) {
+                    Text("HN", style = style(sizes.header, HnOrange, mono = true, bold = true))
+                    Text(" / ", style = style(sizes.header, theme.secondary, mono = true))
+                    Text(settings.section.name, style = style(sizes.header, theme.text, mono = true, bold = true))
+                }
+                Text("12:34", style = style(sizes.header, theme.secondary, mono = true))
                 Icon(
                     painterResource(R.drawable.ic_refresh),
                     contentDescription = null,
                     tint = theme.text,
-                    modifier = Modifier.size(40.dp).padding(8.dp),
+                    modifier = Modifier.size(36.dp).padding(start = 8.dp, top = 8.dp, bottom = 8.dp),
                 )
             }
-            PreviewDivider(theme.divider)
-            stories.take(3).forEach { story ->
-                Column(Modifier.fillMaxWidth().padding(vertical = settings.spacing.story.dp)) {
-                    Text(story.title, style = style(sizes.title, theme.text), maxLines = 3, overflow = TextOverflow.Ellipsis)
-                    Row {
-                        val hot = settings.section.hotThreshold
-                        Text("${story.score}p", style = style(sizes.meta, if (isHotScore(story.score, hot)) HotOrange else theme.secondary))
-                        Text(" - ", style = style(sizes.meta, theme.secondary))
-                        Text("${story.comments}c", style = style(sizes.meta, if (isHotComments(story.comments, hot)) HotOrange else theme.secondary))
+            stories.take(3).forEachIndexed { index, story ->
+                Row(Modifier.fillMaxWidth().padding(vertical = settings.spacing.story.dp)) {
+                    Text(
+                        (index + 1).toString().padStart(2, '0'),
+                        style = style(sizes.rank, rankColor, mono = true),
+                        modifier = Modifier.width((sizes.rank * 1.25f + 10).dp),
+                    )
+                    Column(Modifier.weight(1f)) {
+                        Text(story.title, style = style(sizes.title, theme.text, bold = true), maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        Text(
+                            story.meta(),
+                            style = style(sizes.meta, theme.secondary, mono = true),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.padding(top = 2.dp),
+                        )
                     }
                 }
-                PreviewDivider(theme.divider)
             }
+            Spacer(Modifier.height(8.dp))
         }
     }
-}
-
-@Composable
-private fun PreviewDivider(color: Color) {
-    Box(Modifier.fillMaxWidth().height(1.dp).background(color))
 }

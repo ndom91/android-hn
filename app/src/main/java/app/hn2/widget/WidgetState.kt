@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import app.hn2.data.Story
+import app.hn2.util.domainOf
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -15,6 +16,7 @@ object WidgetKeys {
     val theme = stringPreferencesKey("theme")
     val textSize = stringPreferencesKey("text_size")
     val spacing = stringPreferencesKey("spacing")
+    val orangeRanks = booleanPreferencesKey("orange_ranks")
     val stories = stringPreferencesKey("stories")
     val updatedAt = longPreferencesKey("updated_at")
     val loading = booleanPreferencesKey("loading")
@@ -23,40 +25,49 @@ object WidgetKeys {
 
 /** The few fields the widget shows, so its stored state stays small. */
 @Serializable
-data class WidgetStory(val id: Long, val title: String, val score: Int, val comments: Int)
+data class WidgetStory(
+    val id: Long,
+    val title: String,
+    val score: Int,
+    val comments: Int,
+    /** The link's site, e.g. "example.com"; null for Ask HN and other text posts. */
+    val domain: String? = null,
+)
 
 private val json = Json { ignoreUnknownKeys = true }
 
 fun encodeWidgetStories(stories: List<Story>): String =
-    json.encodeToString(stories.map { WidgetStory(it.id, it.title, it.score, it.descendants) })
+    json.encodeToString(stories.map { WidgetStory(it.id, it.title, it.score, it.descendants, domainOf(it.url)) })
 
 fun decodeWidgetStories(raw: String?): List<WidgetStory> =
     raw?.let { runCatching { json.decodeFromString<List<WidgetStory>>(it) }.getOrNull() }.orEmpty()
 
-/** Points/comments over the hot threshold. The same in every widget theme. */
-val HotOrange = Color(0xFFFFA726)
+/** Hacker News orange: the "HN" in the header, and rank numbers when that setting is on. */
+val HnOrange = Color(0xFFFF6600)
+
+/** "65 pts · 25 comments · example.com" */
+fun WidgetStory.meta(): String = listOfNotNull("$score pts", "$comments comments", domain).joinToString(" · ")
 
 enum class WidgetTheme(
     val label: String,
     val background: Color,
     val text: Color,
     val secondary: Color,
-    val divider: Color,
 ) {
-    DARK("Dark", Color(0xE6121212), Color(0xFFF2F2F2), Color(0xFFA8A8A8), Color(0x33FFFFFF)),
-    TRANSPARENT("Transparent", Color(0x66000000), Color(0xFFFFFFFF), Color(0xFFC8C8C8), Color(0x40FFFFFF)),
-    LIGHT("Light", Color(0xF2FFFFFF), Color(0xFF1A1A1A), Color(0xFF666666), Color(0x22000000));
+    DARK("Dark", Color(0xF22A2D30), Color(0xFFF2F2F2), Color(0xFFA0A4A8)),
+    TRANSPARENT("Transparent", Color(0x66000000), Color(0xFFFFFFFF), Color(0xFFC8C8C8)),
+    LIGHT("Light", Color(0xF2FFFFFF), Color(0xFF1A1A1A), Color(0xFF666666));
 
     companion object {
         fun fromName(name: String?): WidgetTheme = entries.firstOrNull { it.name == name } ?: DARK
     }
 }
 
-/** Text sizes, in sp, for the widget's header, story titles and points/comments line. */
-enum class WidgetTextSize(val label: String, val header: Int, val title: Int, val meta: Int) {
-    SMALL("Small", 14, 13, 11),
-    MEDIUM("Medium", 15, 14, 12),
-    LARGE("Large", 16, 15, 13);
+/** Text sizes, in sp, for the widget's header, rank numbers, story titles and points/comments line. */
+enum class WidgetTextSize(val label: String, val header: Int, val rank: Int, val title: Int, val meta: Int) {
+    SMALL("Small", 11, 20, 13, 10),
+    MEDIUM("Medium", 12, 22, 14, 11),
+    LARGE("Large", 13, 24, 15, 12);
 
     companion object {
         fun fromName(name: String?): WidgetTextSize = entries.firstOrNull { it.name == name } ?: MEDIUM
