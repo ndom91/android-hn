@@ -1,16 +1,9 @@
-<div align="center">
+<h3><img src="docs/icon.svg" width="48" align="middle" alt="hn2">&nbsp; A fast, modern Hacker News reader for Android</h3>
 
-<div>
-<img src="docs/icon.svg" width="112" alt="hn2 icon">
-
-<span>**A fast, modern Hacker News reader for Android, built around a home-screen widget.**</span>
-</div>
 <a href="https://github.com/ndom91/android-hn/releases/latest/download/hn2-debug.apk"><img src="https://img.shields.io/badge/Download-APK-FF6A3D?style=for-the-badge&logo=android&logoColor=white" alt="Download APK"></a>
 
 [Latest release](https://github.com/ndom91/android-hn/releases/latest) ·
 [Build status](https://github.com/ndom91/android-hn/actions/workflows/android.yml)
-
-</div>
 
 ---
 
