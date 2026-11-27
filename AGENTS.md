@@ -76,10 +76,13 @@ row flattening, HTML parsing, formatting) out of composables so it stays testabl
 
 [.github/workflows/android.yml](.github/workflows/android.yml) runs on every push to `main`, on pull
 requests and by hand. It builds the debug APK, runs the unit tests and uploads the APK as a workflow
-artifact. On pushes to `main` it also replaces the rolling `latest` pre-release, so the newest build
-is always at:
+artifact. On pushes to `main` it also replaces the rolling release tagged `latest` and marks it as
+the repo's latest release, so the newest build is always at:
 
-https://github.com/ndom91/android-hn/releases/download/latest/hn2-debug.apk
+https://github.com/ndom91/android-hn/releases/latest/download/hn2-debug.apk
+
+The README links there. Keep that release a full release, not a pre-release: GitHub's
+`/releases/latest` skips pre-releases.
 
 - `versionCode` is the workflow run number (`VERSION_CODE`), so every build installs as an update.
   Local builds use 1.

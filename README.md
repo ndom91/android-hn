@@ -1,10 +1,32 @@
+<div align="center">
+
+<img src="docs/icon.svg" width="112" alt="hn2 icon">
+
 # hn2
 
-A Hacker News reader for Android, built around a home-screen widget.
+**A fast, modern Hacker News reader for Android, built around a home-screen widget.**
+
+<a href="https://github.com/ndom91/android-hn/releases/latest/download/hn2-debug.apk"><img src="https://img.shields.io/badge/Download-APK-FF6A3D?style=for-the-badge&logo=android&logoColor=white" alt="Download APK"></a>
+
+[Latest release](https://github.com/ndom91/android-hn/releases/latest) ·
+[Build status](https://github.com/ndom91/android-hn/actions/workflows/android.yml)
+
+</div>
+
+---
 
 hn2 is a modern take on [Materialistic](https://github.com/hidroh/materialistic), which hasn't been
-maintained since 2019. It keeps what made Materialistic great, a glanceable widget and a
-two-tab article and comments view, and rebuilds the rest with Material You.
+maintained since 2019. It keeps what made Materialistic great, a glanceable widget and a two-tab
+article and comments view, and rebuilds everything else with Material You.
+
+## Get started
+
+1. On your Android phone, tap **[Download APK](https://github.com/ndom91/android-hn/releases/latest/download/hn2-debug.apk)**.
+2. Open the downloaded file. The first time, Android asks you to allow installs from your browser.
+3. Long-press your home screen, choose **Widgets** and add **HN stories**.
+
+hn2 needs Android 8.0 or newer. A new build is published with every change; download it again the
+same way and it updates in place.
 
 ## Features
 
@@ -12,32 +34,21 @@ two-tab article and comments view, and rebuilds the rest with Material You.
   points and comment counts that turn orange when a story is hot. It refreshes on its own every
   30 minutes, or with a tap on its refresh button. Long-press it to change the section or switch
   between dark, transparent and light themes.
-- **Article and comments, side by side.** Tap a story to read the article in a full in-app browser,
-  then swipe or tap over to the comments.
-- **Readable comment threads.** Replies hang off thread lines so you can see who answered whom, and
-  each author gets a colored avatar so you can follow them through a thread. Tap a comment to
+- **Article and comments, side by side.** Tap a story to read the article in a full in-app
+  browser, then swipe or tap over to the comments.
+- **Readable comment threads.** Replies hang off thread lines so you can see who answered whom,
+  and each author gets a colored avatar so you can follow them through a thread. Tap a comment to
   collapse it, or use the arrow button to jump to the next thread.
 - **Material You.** The app picks up your wallpaper colors and follows light and dark mode.
 - **HN links open in the app.** `news.ycombinator.com/item?id=…` links can open straight in hn2.
 
-hn2 is read-only for now: logging in, voting and replying are planned.
+hn2 is read-only for now. Logging in, voting and replying are planned.
 
-## Install
-
-Download the latest build and open it on your phone:
-
-**[hn2-debug.apk](https://github.com/ndom91/android-hn/releases/download/latest/hn2-debug.apk)**
-
-A new build is published on every change, and it installs over the previous one. Android will ask
-you to allow installs from your browser the first time. hn2 needs Android 8.0 or newer.
-
-To add the widget, long-press your home screen, choose **Widgets** and pick **HN stories**.
-
-## Data
+## Privacy
 
 Stories come from the official [Hacker News API](https://github.com/HackerNews/API) and comments
-from [Algolia's HN Search API](https://hn.algolia.com/api). hn2 has no account, server or analytics
-of its own.
+from [Algolia's HN Search API](https://hn.algolia.com/api). hn2 has no account, server or
+analytics of its own.
 
 ## Contributing
 
