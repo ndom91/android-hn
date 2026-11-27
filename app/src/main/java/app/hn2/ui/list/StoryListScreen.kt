@@ -1,50 +1,52 @@
 package app.hn2.ui.list
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material.icons.outlined.ChatBubbleOutline
+import androidx.compose.material.icons.rounded.ArrowUpward
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.hn2.data.Section
 import app.hn2.data.Story
 import app.hn2.repository
-import app.hn2.ui.item.ErrorMessage
+import app.hn2.ui.common.ErrorMessage
+import app.hn2.ui.common.Pill
 import app.hn2.ui.item.ItemActivity
-import app.hn2.ui.theme.HotOrange
 import app.hn2.util.domainOf
 import app.hn2.util.isHotComments
 import app.hn2.util.isHotScore
 import app.hn2.util.relativeTime
+
+private val OuterRadius = 24.dp
+private val InnerRadius = 6.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -52,13 +54,23 @@ fun StoryListScreen(initialSection: Section) {
     val context = LocalContext.current
     val viewModel = viewModel { StoryListViewModel(context.repository, initialSection) }
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
     Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
-            TopAppBar(
-                title = { SectionPicker(state.section, viewModel::select) },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-            )
+            Column {
+                LargeTopAppBar(
+                    title = { Text(state.section.title) },
+                    scrollBehavior = scrollBehavior,
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    ),
+                )
+                SectionChips(state.section, viewModel::select)
+            }
         },
     ) { padding ->
         PullToRefreshBox(
@@ -69,12 +81,21 @@ fun StoryListScreen(initialSection: Section) {
             if (state.error != null && state.stories.isEmpty()) {
                 ErrorMessage(state.error!!, onRetry = viewModel::refresh)
             } else {
-                LazyColumn(Modifier.fillMaxSize()) {
-                    items(state.stories, key = { it.id }) { story ->
-                        StoryRow(story, state.section.hotThreshold) {
-                            context.startActivity(ItemActivity.intent(context, story.id))
-                        }
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                LazyColumn(
+                    Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 24.dp),
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
+                    itemsIndexed(state.stories, key = { _, story -> story.id }) { index, story ->
+                        StoryCard(
+                            story = story,
+                            hotThreshold = state.section.hotThreshold,
+                            shape = segmentShape(index, state.stories.size),
+                            onOpen = { context.startActivity(ItemActivity.intent(context, story.id)) },
+                            onOpenComments = {
+                                context.startActivity(ItemActivity.intent(context, story.id, startOnComments = true))
+                            },
+                        )
                     }
                 }
             }
@@ -83,42 +104,72 @@ fun StoryListScreen(initialSection: Section) {
 }
 
 @Composable
-private fun SectionPicker(section: Section, onSelect: (Section) -> Unit) {
-    var expanded by remember { mutableStateOf(false) }
-    Box {
-        TextButton(onClick = { expanded = true }) {
-            Text(section.title.uppercase(), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
-            Icon(Icons.Default.ArrowDropDown, null, tint = MaterialTheme.colorScheme.onSurface)
-        }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            Section.entries.forEach {
-                DropdownMenuItem(text = { Text(it.title) }, onClick = { expanded = false; onSelect(it) })
-            }
+private fun SectionChips(selected: Section, onSelect: (Section) -> Unit) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = 12.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Section.entries.forEach { section ->
+            FilterChip(
+                selected = section == selected,
+                onClick = { onSelect(section) },
+                label = { Text(section.title) },
+            )
         }
     }
 }
 
+/** Grouped-list shape: big corners on the outside of the group, small ones between items. */
+private fun segmentShape(index: Int, count: Int) = RoundedCornerShape(
+    topStart = if (index == 0) OuterRadius else InnerRadius,
+    topEnd = if (index == 0) OuterRadius else InnerRadius,
+    bottomStart = if (index == count - 1) OuterRadius else InnerRadius,
+    bottomEnd = if (index == count - 1) OuterRadius else InnerRadius,
+)
+
 @Composable
-private fun StoryRow(story: Story, hotThreshold: Int, onClick: () -> Unit) {
+private fun StoryCard(
+    story: Story,
+    hotThreshold: Int,
+    shape: RoundedCornerShape,
+    onOpen: () -> Unit,
+    onOpenComments: () -> Unit,
+) {
     val colors = MaterialTheme.colorScheme
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        Text(story.title, style = MaterialTheme.typography.titleMedium)
-        domainOf(story.url)?.let {
-            Text(it, fontStyle = FontStyle.Italic, color = colors.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
-        }
-        Row {
-            val meta = MaterialTheme.typography.bodyMedium
-            Text("${story.score}p", style = meta, color = if (isHotScore(story.score, hotThreshold)) HotOrange else colors.onSurfaceVariant)
-            Text(" - ", style = meta, color = colors.onSurfaceVariant)
-            Text("${story.descendants}c", style = meta, color = if (isHotComments(story.descendants, hotThreshold)) HotOrange else colors.onSurfaceVariant)
-            Text(" · ${relativeTime(story.time)} - ", style = meta, color = colors.onSurfaceVariant)
-            Text(story.by.orEmpty(), style = meta, color = colors.primary)
+    Surface(onClick = onOpen, shape = shape, color = colors.surfaceContainer, modifier = Modifier.fillMaxWidth()) {
+        Column(
+            Modifier.padding(horizontal = 18.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            val source = listOfNotNull(domainOf(story.url), story.by, relativeTime(story.time)).joinToString(" · ")
+            Text(
+                source,
+                style = MaterialTheme.typography.labelMedium,
+                color = colors.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(story.title, style = MaterialTheme.typography.titleMedium)
+            Row(
+                Modifier.padding(top = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Pill(
+                    "${story.score}",
+                    icon = Icons.Rounded.ArrowUpward,
+                    highlighted = isHotScore(story.score, hotThreshold),
+                )
+                Pill(
+                    "${story.descendants}",
+                    icon = Icons.Outlined.ChatBubbleOutline,
+                    highlighted = isHotComments(story.descendants, hotThreshold),
+                    onClick = onOpenComments,
+                )
+            }
         }
     }
 }

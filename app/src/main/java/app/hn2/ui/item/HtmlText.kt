@@ -31,7 +31,7 @@ import app.hn2.util.parseHtmlBlocks
 fun HtmlText(html: String, modifier: Modifier = Modifier, style: TextStyle = MaterialTheme.typography.bodyLarge) {
     val blocks = remember(html) { parseHtmlBlocks(html) }
     val linkColor = MaterialTheme.colorScheme.primary
-    val codeBackground = MaterialTheme.colorScheme.surfaceVariant
+    val codeBackground = MaterialTheme.colorScheme.surfaceContainerHighest
     Column(modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
         for (block in blocks) {
             when (block) {
@@ -49,9 +49,9 @@ fun HtmlText(html: String, modifier: Modifier = Modifier, style: TextStyle = Mat
                 is HtmlBlock.Code -> Box(
                     Modifier
                         .fillMaxWidth()
-                        .background(codeBackground, RoundedCornerShape(4.dp))
+                        .background(codeBackground, RoundedCornerShape(12.dp))
                         .horizontalScroll(rememberScrollState())
-                        .padding(10.dp),
+                        .padding(12.dp),
                 ) {
                     Text(block.code, fontFamily = FontFamily.Monospace, fontSize = 13.sp, softWrap = false)
                 }

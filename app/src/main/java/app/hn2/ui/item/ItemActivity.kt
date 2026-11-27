@@ -22,17 +22,21 @@ class ItemActivity : ComponentActivity() {
             finish()
             return
         }
+        val startOnComments = intent.getBooleanExtra(EXTRA_START_ON_COMMENTS, false)
         enableEdgeToEdge()
         setContent {
-            Hn2Theme { ItemScreen(itemId, onBack = ::finish) }
+            Hn2Theme { ItemScreen(itemId, startOnComments, onBack = ::finish) }
         }
     }
 
     companion object {
         /** Also the widget's action parameter name; keep them in sync. */
         const val EXTRA_ITEM_ID = "item_id"
+        private const val EXTRA_START_ON_COMMENTS = "start_on_comments"
 
-        fun intent(context: Context, itemId: Long): Intent =
-            Intent(context, ItemActivity::class.java).putExtra(EXTRA_ITEM_ID, itemId)
+        fun intent(context: Context, itemId: Long, startOnComments: Boolean = false): Intent =
+            Intent(context, ItemActivity::class.java)
+                .putExtra(EXTRA_ITEM_ID, itemId)
+                .putExtra(EXTRA_START_ON_COMMENTS, startOnComments)
     }
 }

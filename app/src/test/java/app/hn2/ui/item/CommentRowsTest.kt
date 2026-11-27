@@ -15,6 +15,7 @@ class CommentRowsTest {
         val rows = flattenComments(tree, emptySet())
         assertEquals(listOf(1L, 2L, 3L, 4L, 5L), rows.map { it.comment.id })
         assertEquals(listOf(0, 1, 2, 1, 0), rows.map { it.depth })
+        assertEquals(listOf(false, false, false, true, true), rows.map { it.endsThread })
     }
 
     @Test
