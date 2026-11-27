@@ -50,7 +50,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.PrimaryTabRow
@@ -211,7 +210,7 @@ private fun StoryContent(
         ) {
             // Commenting belongs to the comments; over the article only fullscreen is offered.
             AnimatedVisibility(visible = !onArticle, enter = scaleIn() + fadeIn(), exit = scaleOut() + fadeOut()) {
-                SmallFloatingActionButton(
+                FloatingActionButton(
                     onClick = { signedIn { viewModel.openComposer(null) } },
                     containerColor = MaterialTheme.colorScheme.secondaryContainer,
                     contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
@@ -310,15 +309,19 @@ private fun Header(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
+                        // The vote pill is clickable, so Material grows its touch target to 48dp;
+                        // centering keeps the visible pills on one line.
+                        val centered = Modifier.align(Alignment.CenterVertically)
                         Pill(
                             "$score",
+                            modifier = centered,
                             icon = Icons.Rounded.ArrowUpward,
                             highlighted = isHotScore(score, Section.TOP.hotThreshold),
                             selected = voted,
                             onClick = onVote,
                         )
-                        Pill(relativeTime(story.time), icon = Icons.Outlined.Schedule)
-                        story.by?.let { Pill(it, icon = Icons.Outlined.Person) }
+                        Pill(relativeTime(story.time), centered, icon = Icons.Outlined.Schedule)
+                        story.by?.let { Pill(it, centered, icon = Icons.Outlined.Person) }
                     }
                 }
             }
