@@ -18,9 +18,9 @@ article and comments view, and rebuilds everything else with Material You.
     <td align="center" width="33%"><img src="docs/screenshots/article.jpg" alt="An article open in the in-app browser"></td>
   </tr>
   <tr>
-    <td align="center" valign="middle"><small>Top stories on your home screen</small></td>
-    <td align="center" valign="middle"><small>Threaded comments</small></td>
-    <td align="center" valign="middle"><small>The article, one swipe away</small></td>
+    <td align="center" valign="middle">Top stories on your home screen</td>
+    <td align="center" valign="middle">Threaded comments</td>
+    <td align="center" valign="middle">The article, one swipe away</td>
   </tr>
 </table>
 
