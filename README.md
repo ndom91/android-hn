@@ -8,7 +8,9 @@
 
 hn2 is a modern take on [Materialistic](https://github.com/hidroh/materialistic), which hasn't been
 maintained since 2019. It keeps what made Materialistic great, a glanceable widget and a two-tab
-article and comments view, and rebuilds everything else with Material You.
+article and comments view, and rebuilds everything else with Material You. The app takes its
+colors from your phone's wallpaper and theme, so on your phone it won't necessarily be the cyan
+shown in the screenshots.
 
 <table>
   <tr>
