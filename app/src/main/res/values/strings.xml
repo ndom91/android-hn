@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">hn2</string>
+    <string name="widget_name">HN stories</string>
+    <string name="widget_description">Hacker News stories. Tap one to read the article and its comments.</string>
+</resources>
