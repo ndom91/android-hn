@@ -76,13 +76,19 @@ row flattening, HTML parsing, formatting) out of composables so it stays testabl
 
 [.github/workflows/android.yml](.github/workflows/android.yml) runs on every push to `main`, on pull
 requests and by hand. It builds the debug APK, runs the unit tests and uploads the APK as a workflow
-artifact. On pushes to `main` it also replaces the rolling release tagged `latest` and marks it as
-the repo's latest release, so the newest build is always at:
+artifact.
+
+Every push to `main` is also a release. CI takes the newest `vX.Y.Z` tag, bumps the patch number
+(0.1.0, 0.1.1, ...), writes that into `versionName` in `app/build.gradle.kts`, builds, and publishes
+a GitHub release `vX.Y.Z` titled "hn2 X.Y.Z" with the APK as `hn2-debug.apk`, marked as the repo's
+latest release. It then commits the new `versionName` back to `main` as "Release X.Y.Z [skip ci]",
+so pull before pushing. The newest build is always at:
 
 https://github.com/ndom91/android-hn/releases/latest/download/hn2-debug.apk
 
-The README links there. Keep that release a full release, not a pre-release: GitHub's
-`/releases/latest` skips pre-releases.
+The README links there, so keep the asset name. Releases must be full releases, not pre-releases:
+GitHub's `/releases/latest` skips pre-releases. To start a new minor or major version, set
+`versionName` to it (e.g. `0.2.0`) and push; CI releases a `versionName` above the newest tag as is.
 
 - `versionCode` is the workflow run number (`VERSION_CODE`), so every build installs as an update.
   Local builds use 1.

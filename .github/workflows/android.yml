@@ -34,6 +34,21 @@ jobs:
           echo "$DEBUG_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/debug.keystore"
           echo "HN2_DEBUG_KEYSTORE=$RUNNER_TEMP/debug.keystore" >> "$GITHUB_ENV"
 
+      # Releases count up from the newest vX.Y.Z tag: v0.1.0, v0.1.1, ... A versionName in
+      # app/build.gradle.kts above that (say 0.2.0) is released as is. Either way the new
+      # version is written into app/build.gradle.kts before building.
+      - name: Pick next version
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          last=$(git ls-remote --tags --refs origin 'v*' | sed 's#.*refs/tags/v##' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1)
+          if [ -z "$last" ]; then next=0.1.0; else next="${last%.*}.$(( ${last##*.} + 1 ))"; fi
+          current=$(sed -n -E 's/.*versionName = "([^"]*)".*/\1/p' app/build.gradle.kts)
+          if [ "$current" != "${last:-}" ] && [ "$(printf '%s\n' "$current" "$next" | sort -V | tail -1)" = "$current" ]; then next=$current; fi
+          echo "Releasing $next (previous: ${last:-none})"
+          echo "VERSION=$next" >> "$GITHUB_ENV"
+          sed -i -E "s/versionName = \"[^\"]*\"/versionName = \"$next\"/" app/build.gradle.kts
+          grep -q "versionName = \"$next\"" app/build.gradle.kts
+
       - name: Build and test
         run: ./gradlew assembleDebug testDebugUnitTest --console=plain
         env:
@@ -53,16 +68,24 @@ jobs:
           name: hn2-debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
 
-      # One rolling release, marked as the repo's latest so /releases/latest always finds it.
-      - name: Publish "latest" release
+      - name: Publish release
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           cp app/build/outputs/apk/debug/app-debug.apk hn2-debug.apk
-          gh release delete latest --cleanup-tag --yes || true
-          gh release create latest hn2-debug.apk \
+          gh release create "v$VERSION" hn2-debug.apk \
             --latest \
             --target "$GITHUB_SHA" \
-            --title "hn2 build ${{ github.run_number }}" \
+            --title "hn2 $VERSION" \
             --notes "Built from ${GITHUB_SHA::7}. Download **hn2-debug.apk** below on your Android phone and open it to install, or to update an existing install."
+
+      # Keep the version in the repo in step with the newest release. If main has
+      # moved on meanwhile, the next release writes its own version instead.
+      - name: Commit version bump
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "Release $VERSION [skip ci]"
+          git push origin HEAD:main || echo "main moved on; skipping the version commit"
