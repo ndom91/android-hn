@@ -1,4 +1,4 @@
-<h3><img src="docs/icon.svg" width="48" align="middle" alt="hn2">&nbsp; A fast, modern Hacker News reader for Android</h3>
+<h3><img src="docs/icon.svg" width="48" align="absmiddle" alt="hn2">&nbsp; A fast, modern Hacker News reader for Android</h3>
 
 <a href="https://github.com/ndom91/android-hn/releases/latest/download/hn2-debug.apk"><img src="https://img.shields.io/badge/Download-APK-FF6A3D?style=for-the-badge&logo=android&logoColor=white" alt="Download APK"></a>
 
@@ -18,9 +18,9 @@ article and comments view, and rebuilds everything else with Material You.
     <td align="center" width="33%"><img src="docs/screenshots/article.jpg" alt="An article open in the in-app browser"></td>
   </tr>
   <tr>
-    <td align="center"><sub>Top stories on your home screen</sub></td>
-    <td align="center"><sub>Threaded comments</sub></td>
-    <td align="center"><sub>The article, one swipe away</sub></td>
+    <td align="center" valign="middle"><small>Top stories on your home screen</small></td>
+    <td align="center" valign="middle"><small>Threaded comments</small></td>
+    <td align="center" valign="middle"><small>The article, one swipe away</small></td>
   </tr>
 </table>
 
