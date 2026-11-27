@@ -5,8 +5,8 @@ import android.content.Intent
 import android.net.Uri
 import android.webkit.WebView
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -25,37 +26,40 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Article
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.outlined.AddComment
 import androidx.compose.material.icons.outlined.Forum
-import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.rounded.ArrowUpward
 import androidx.compose.material.icons.rounded.Fullscreen
 import androidx.compose.material.icons.rounded.FullscreenExit
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.OpenInBrowser
 import androidx.compose.material.icons.rounded.Share
+import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
+import androidx.compose.material3.ToggleButton
+import androidx.compose.material3.ToggleButtonDefaults
+import androidx.compose.material3.ToggleButtonShapes
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -72,14 +76,17 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import app.hn2.account
 import app.hn2.data.Section
 import app.hn2.data.Story
-import app.hn2.account
 import app.hn2.repository
 import app.hn2.ui.account.LoginDialog
 import app.hn2.ui.account.signedInUser
@@ -326,40 +333,54 @@ private fun Header(
                 }
             }
             if (pagerState.pageCount > 1) {
-                PrimaryTabRow(selectedTabIndex = pagerState.currentPage, containerColor = colors.surface) {
-                    TabLabel(
+                // A two-way switch, so a connected button group (Material 3 Expressive) rather than tabs.
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(start = 16.dp, end = 16.dp, bottom = 12.dp)
+                        .selectableGroup(),
+                    horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween),
+                ) {
+                    PageButton(
                         selected = pagerState.currentPage == PAGE_COMMENTS,
                         icon = Icons.Outlined.Forum,
                         text = "${story.descendants} comments",
+                        shapes = ButtonGroupDefaults.connectedLeadingButtonShapes(),
                         onClick = { onSelectPage(PAGE_COMMENTS) },
                     )
-                    TabLabel(
+                    PageButton(
                         selected = pagerState.currentPage == PAGE_ARTICLE,
                         icon = Icons.AutoMirrored.Outlined.Article,
                         text = "Article",
+                        shapes = ButtonGroupDefaults.connectedTrailingButtonShapes(),
                         onClick = { onSelectPage(PAGE_ARTICLE) },
                     )
                 }
+                HorizontalDivider(color = colors.outlineVariant)
             }
         }
     }
 }
 
 @Composable
-private fun TabLabel(selected: Boolean, icon: ImageVector, text: String, onClick: () -> Unit) {
-    Tab(
-        selected = selected,
-        onClick = onClick,
-        selectedContentColor = MaterialTheme.colorScheme.primary,
-        unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-        text = {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(icon, null, Modifier.size(18.dp))
-                Spacer(Modifier.width(8.dp))
-                Text(text, style = MaterialTheme.typography.titleSmall)
-            }
-        },
-    )
+private fun RowScope.PageButton(
+    selected: Boolean,
+    icon: ImageVector,
+    text: String,
+    shapes: ToggleButtonShapes,
+    onClick: () -> Unit,
+) {
+    ToggleButton(
+        checked = selected,
+        onCheckedChange = { onClick() },
+        modifier = Modifier
+            .weight(1f)
+            .semantics { role = Role.RadioButton },
+        shapes = shapes,
+        icon = { Icon(icon, contentDescription = null, Modifier.size(ToggleButtonDefaults.IconSize)) },
+    ) {
+        Text(text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
 }
 
 @Composable

@@ -6,9 +6,10 @@ Notes for working on hn2, for people and coding agents alike. What the app does 
 
 ## Stack
 
-- Kotlin 2.1, AGP 8.7, Gradle 8.11 (wrapper), JDK 17
-- `compileSdk`/`targetSdk` 35, `minSdk` 26
-- Jetpack Compose + Material 3 for the app UI, with dynamic color on Android 12+
+- Kotlin 2.4, AGP 9.5 (with its built-in Kotlin support), Gradle 9.6 (wrapper), JDK 17
+- `compileSdk` 37.1, `targetSdk` 35, `minSdk` 26
+- Jetpack Compose + Material 3 Expressive (material3 1.5) for the app UI, with dynamic color on
+  Android 12+
 - Jetpack Glance for the widget, WorkManager for its refreshes
 - OkHttp + kotlinx.serialization for networking, coroutines throughout
 - JUnit 4 for unit tests
@@ -17,7 +18,7 @@ Versions live in [gradle/libs.versions.toml](gradle/libs.versions.toml).
 
 ## Build and test
 
-You need JDK 17 and the Android SDK with platform 35. Point Gradle at the SDK with `sdk.dir` in
+You need JDK 17 and the Android SDK with platform 37.1 (AGP downloads it if it's missing). Point Gradle at the SDK with `sdk.dir` in
 `local.properties` (gitignored) or `ANDROID_HOME`.
 
 ```sh
