@@ -6,39 +6,67 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.glance.GlanceId
+import androidx.compose.ui.unit.sp
 import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.state.getAppWidgetState
 import androidx.glance.appwidget.state.updateAppWidgetState
+import androidx.glance.GlanceId
 import androidx.glance.state.PreferencesGlanceStateDefinition
 import androidx.lifecycle.lifecycleScope
+import app.hn2.R
 import app.hn2.data.Section
 import app.hn2.ui.theme.Hn2Theme
+import app.hn2.util.isHotComments
+import app.hn2.util.isHotScore
 import kotlinx.coroutines.launch
 
-/** Lets you pick the widget's section and theme, when placing it or later from its long-press menu. */
+/** Widget settings, when placing the widget or later from its long-press menu. */
 class WidgetConfigActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -55,17 +83,21 @@ class WidgetConfigActivity : ComponentActivity() {
         lifecycleScope.launch {
             val glanceId = GlanceAppWidgetManager(this@WidgetConfigActivity).getGlanceIdBy(appWidgetId)
             val prefs = getAppWidgetState(this@WidgetConfigActivity, PreferencesGlanceStateDefinition, glanceId)
-            val currentSection = Section.fromName(prefs[WidgetKeys.section])
+            val current = WidgetSettings(
+                section = Section.fromName(prefs[WidgetKeys.section]),
+                theme = WidgetTheme.fromName(prefs[WidgetKeys.theme]),
+                textSize = WidgetTextSize.fromName(prefs[WidgetKeys.textSize]),
+                spacing = WidgetSpacing.fromName(prefs[WidgetKeys.spacing]),
+            )
+            // Preview with the stories the widget is showing, or examples for a new one.
+            val stories = decodeWidgetStories(prefs[WidgetKeys.stories]).ifEmpty { SampleStories }
             setContent {
                 Hn2Theme {
                     ConfigScreen(
-                        initial = WidgetSettings(
-                            section = currentSection,
-                            theme = WidgetTheme.fromName(prefs[WidgetKeys.theme]),
-                            textSize = WidgetTextSize.fromName(prefs[WidgetKeys.textSize]),
-                            spacing = WidgetSpacing.fromName(prefs[WidgetKeys.spacing]),
-                        ),
-                        onSave = { settings -> save(glanceId, settings, currentSection, result) },
+                        initial = current,
+                        stories = stories,
+                        onSave = { settings -> save(glanceId, settings, current.section, result) },
+                        onCancel = ::finish,
                     )
                 }
             }
@@ -99,53 +131,194 @@ private data class WidgetSettings(
     val spacing: WidgetSpacing,
 )
 
-@OptIn(ExperimentalMaterial3Api::class)
+private val SampleStories = listOf(
+    WidgetStory(1, "Show HN: A tiny Hacker News widget for your home screen", 412, 138),
+    WidgetStory(2, "The unreasonable effectiveness of plain text", 96, 41),
+    WidgetStory(3, "Why we moved our build system back to Make", 251, 230),
+)
+
+/** A stand-in wallpaper behind the previews, so the transparent theme reads as transparent. */
+private val Wallpaper = Brush.linearGradient(listOf(Color(0xFF2E3F63), Color(0xFF6B5A7A), Color(0xFFB38A6A)))
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-private fun ConfigScreen(initial: WidgetSettings, onSave: (WidgetSettings) -> Unit) {
-    var settings by remember { mutableStateOf(initial) }
-    Scaffold(topBar = { TopAppBar(title = { Text("Widget settings") }) }) { padding ->
+private fun ConfigScreen(
+    initial: WidgetSettings,
+    stories: List<WidgetStory>,
+    onSave: (WidgetSettings) -> Unit,
+    onCancel: () -> Unit,
+) {
+    // Section, theme and the rest are enums, so the settings survive rotation as their names.
+    var section by rememberSaveable { mutableStateOf(initial.section) }
+    var theme by rememberSaveable { mutableStateOf(initial.theme) }
+    var textSize by rememberSaveable { mutableStateOf(initial.textSize) }
+    var spacing by rememberSaveable { mutableStateOf(initial.spacing) }
+    val settings = WidgetSettings(section, theme, textSize, spacing)
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Widget settings") },
+                navigationIcon = { IconButton(onClick = onCancel) { Icon(Icons.Rounded.Close, "Cancel") } },
+            )
+        },
+        bottomBar = {
+            Surface(color = MaterialTheme.colorScheme.surfaceContainer) {
+                Button(
+                    onClick = { onSave(settings) },
+                    modifier = Modifier
+                        .navigationBarsPadding()
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 12.dp)
+                        .height(48.dp),
+                ) { Text("Save") }
+            }
+        },
+    ) { padding ->
         Column(
             Modifier
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
+                .padding(horizontal = 20.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(28.dp),
         ) {
-            Heading("Section")
-            Section.entries.forEach { RadioRow(it.title, it == settings.section) { settings = settings.copy(section = it) } }
-            Heading("Theme")
-            WidgetTheme.entries.forEach { RadioRow(it.label, it == settings.theme) { settings = settings.copy(theme = it) } }
-            Heading("Text size")
-            WidgetTextSize.entries.forEach {
-                RadioRow(it.label, it == settings.textSize) { settings = settings.copy(textSize = it) }
+            WidgetPreview(settings, stories)
+
+            Setting("Stories") {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Section.entries.forEach {
+                        FilterChip(selected = it == section, onClick = { section = it }, label = { Text(it.title) })
+                    }
+                }
             }
-            Heading("Spacing")
-            WidgetSpacing.entries.forEach {
-                RadioRow(it.label, it == settings.spacing) { settings = settings.copy(spacing = it) }
+            Setting("Theme") {
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    WidgetTheme.entries.forEach {
+                        ThemeSwatch(it, selected = it == theme, onClick = { theme = it }, modifier = Modifier.weight(1f))
+                    }
+                }
             }
-            Button(onClick = { onSave(settings) }, modifier = Modifier.fillMaxWidth().padding(top = 24.dp)) {
-                Text("Save")
+            Setting("Text size") {
+                Segmented(WidgetTextSize.entries, textSize, { it.label }) { textSize = it }
+            }
+            Setting("Spacing") {
+                Segmented(WidgetSpacing.entries, spacing, { it.label }) { spacing = it }
             }
         }
     }
 }
 
 @Composable
-private fun Heading(text: String) {
-    Text(
-        text,
-        style = MaterialTheme.typography.titleSmall,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(top = 16.dp, bottom = 4.dp),
-    )
+private fun Setting(title: String, content: @Composable () -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text(title, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+        content()
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun <T> Segmented(options: List<T>, selected: T, label: (T) -> String, onSelect: (T) -> Unit) {
+    SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+        options.forEachIndexed { index, option ->
+            SegmentedButton(
+                selected = option == selected,
+                onClick = { onSelect(option) },
+                shape = SegmentedButtonDefaults.itemShape(index, options.size),
+            ) { Text(label(option)) }
+        }
+    }
+}
+
+/** A small sample of one widget theme over the stand-in wallpaper. */
+@Composable
+private fun ThemeSwatch(theme: WidgetTheme, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val colors = MaterialTheme.colorScheme
+    val shape = RoundedCornerShape(16.dp)
+    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(64.dp)
+                .clip(shape)
+                .background(Wallpaper)
+                .border(if (selected) 2.dp else 1.dp, if (selected) colors.primary else colors.outlineVariant, shape)
+                .clickable(onClick = onClick)
+                .padding(10.dp),
+        ) {
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .height(44.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(theme.background),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text("Aa", color = theme.text, style = MaterialTheme.typography.titleMedium)
+            }
+        }
+        Text(
+            theme.label,
+            style = MaterialTheme.typography.labelLarge,
+            color = if (selected) colors.primary else colors.onSurfaceVariant,
+        )
+    }
+}
+
+/** The widget as it will look, drawn with the same colors, sizes and spacing as the real one. */
+@Composable
+private fun WidgetPreview(settings: WidgetSettings, stories: List<WidgetStory>) {
+    val theme = settings.theme
+    val sizes = settings.textSize
+    fun style(size: Int, color: Color) = TextStyle(color = color, fontSize = size.sp, lineHeight = (size * 1.3f).sp)
+
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(28.dp))
+            .background(Wallpaper)
+            .padding(20.dp),
+    ) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(theme.background)
+                .padding(horizontal = 12.dp),
+        ) {
+            Row(Modifier.fillMaxWidth().padding(vertical = settings.spacing.header.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    settings.section.title.uppercase(),
+                    style = style(sizes.header, theme.text),
+                    maxLines = 1,
+                    modifier = Modifier.weight(1f),
+                )
+                Text("12:34", style = style(sizes.meta, theme.secondary))
+                Icon(
+                    painterResource(R.drawable.ic_refresh),
+                    contentDescription = null,
+                    tint = theme.text,
+                    modifier = Modifier.size(40.dp).padding(8.dp),
+                )
+            }
+            PreviewDivider(theme.divider)
+            stories.take(3).forEach { story ->
+                Column(Modifier.fillMaxWidth().padding(vertical = settings.spacing.story.dp)) {
+                    Text(story.title, style = style(sizes.title, theme.text), maxLines = 3, overflow = TextOverflow.Ellipsis)
+                    Row {
+                        val hot = settings.section.hotThreshold
+                        Text("${story.score}p", style = style(sizes.meta, if (isHotScore(story.score, hot)) HotOrange else theme.secondary))
+                        Text(" - ", style = style(sizes.meta, theme.secondary))
+                        Text("${story.comments}c", style = style(sizes.meta, if (isHotComments(story.comments, hot)) HotOrange else theme.secondary))
+                    }
+                }
+                PreviewDivider(theme.divider)
+            }
+        }
+    }
 }
 
 @Composable
-private fun RadioRow(label: String, selected: Boolean, onClick: () -> Unit) {
-    Row(
-        Modifier.fillMaxWidth().selectable(selected = selected, onClick = onClick).padding(vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        RadioButton(selected = selected, onClick = null)
-        Text(label, modifier = Modifier.padding(start = 12.dp))
-    }
+private fun PreviewDivider(color: Color) {
+    Box(Modifier.fillMaxWidth().height(1.dp).background(color))
 }

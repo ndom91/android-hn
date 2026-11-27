@@ -140,7 +140,7 @@ private fun StoryItem(
         Column(
             GlanceModifier
                 .fillMaxWidth()
-                .padding(vertical = spacing.story.dp, horizontal = 4.dp)
+                .padding(vertical = spacing.story.dp)
                 .clickable(actionStartActivity<ItemActivity>(actionParametersOf(ItemIdKey to story.id))),
         ) {
             Text(story.title, style = TextStyle(color = ColorProvider(theme.text), fontSize = textSize.title.sp), maxLines = 3)
