@@ -73,6 +73,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
@@ -189,6 +190,8 @@ private fun StoryContent(
                 modifier = Modifier
                     .weight(1f)
                     .navigationBarsPadding()
+                    // HorizontalPager only clips sideways; without this a loading WebView paints over the header.
+                    .clipToBounds()
                     .nestedScroll(header.nestedScrollConnection)
                     .swipeFromArticle(pagerState, PAGE_ARTICLE, webView),
             ) { page ->
