@@ -59,21 +59,27 @@ class WidgetConfigActivity : ComponentActivity() {
             setContent {
                 Hn2Theme {
                     ConfigScreen(
-                        initialSection = currentSection,
-                        initialTheme = WidgetTheme.fromName(prefs[WidgetKeys.theme]),
-                        onSave = { section, theme -> save(glanceId, section, theme, currentSection, result) },
+                        initial = WidgetSettings(
+                            section = currentSection,
+                            theme = WidgetTheme.fromName(prefs[WidgetKeys.theme]),
+                            textSize = WidgetTextSize.fromName(prefs[WidgetKeys.textSize]),
+                            spacing = WidgetSpacing.fromName(prefs[WidgetKeys.spacing]),
+                        ),
+                        onSave = { settings -> save(glanceId, settings, currentSection, result) },
                     )
                 }
             }
         }
     }
 
-    private fun save(glanceId: GlanceId, section: Section, theme: WidgetTheme, previous: Section, result: Intent) {
+    private fun save(glanceId: GlanceId, settings: WidgetSettings, previous: Section, result: Intent) {
         lifecycleScope.launch {
             updateAppWidgetState(this@WidgetConfigActivity, glanceId) { state ->
-                state[WidgetKeys.section] = section.name
-                state[WidgetKeys.theme] = theme.name
-                if (section != previous) {
+                state[WidgetKeys.section] = settings.section.name
+                state[WidgetKeys.theme] = settings.theme.name
+                state[WidgetKeys.textSize] = settings.textSize.name
+                state[WidgetKeys.spacing] = settings.spacing.name
+                if (settings.section != previous) {
                     state.remove(WidgetKeys.stories)
                     state[WidgetKeys.loading] = true
                 }
@@ -86,11 +92,17 @@ class WidgetConfigActivity : ComponentActivity() {
     }
 }
 
+private data class WidgetSettings(
+    val section: Section,
+    val theme: WidgetTheme,
+    val textSize: WidgetTextSize,
+    val spacing: WidgetSpacing,
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ConfigScreen(initialSection: Section, initialTheme: WidgetTheme, onSave: (Section, WidgetTheme) -> Unit) {
-    var section by remember { mutableStateOf(initialSection) }
-    var theme by remember { mutableStateOf(initialTheme) }
+private fun ConfigScreen(initial: WidgetSettings, onSave: (WidgetSettings) -> Unit) {
+    var settings by remember { mutableStateOf(initial) }
     Scaffold(topBar = { TopAppBar(title = { Text("Widget settings") }) }) { padding ->
         Column(
             Modifier
@@ -99,10 +111,18 @@ private fun ConfigScreen(initialSection: Section, initialTheme: WidgetTheme, onS
                 .padding(16.dp),
         ) {
             Heading("Section")
-            Section.entries.forEach { RadioRow(it.title, it == section) { section = it } }
+            Section.entries.forEach { RadioRow(it.title, it == settings.section) { settings = settings.copy(section = it) } }
             Heading("Theme")
-            WidgetTheme.entries.forEach { RadioRow(it.label, it == theme) { theme = it } }
-            Button(onClick = { onSave(section, theme) }, modifier = Modifier.fillMaxWidth().padding(top = 24.dp)) {
+            WidgetTheme.entries.forEach { RadioRow(it.label, it == settings.theme) { settings = settings.copy(theme = it) } }
+            Heading("Text size")
+            WidgetTextSize.entries.forEach {
+                RadioRow(it.label, it == settings.textSize) { settings = settings.copy(textSize = it) }
+            }
+            Heading("Spacing")
+            WidgetSpacing.entries.forEach {
+                RadioRow(it.label, it == settings.spacing) { settings = settings.copy(spacing = it) }
+            }
+            Button(onClick = { onSave(settings) }, modifier = Modifier.fillMaxWidth().padding(top = 24.dp)) {
                 Text("Save")
             }
         }

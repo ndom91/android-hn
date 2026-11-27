@@ -65,7 +65,9 @@ row flattening, HTML parsing, formatting) out of composables so it stays testabl
 ## Conventions and gotchas
 
 - **The widget's look is final.** Don't change its layout, colors or text sizes without being asked.
-  Its colors live in `widget/WidgetState.kt`, separate from the app theme.
+  Its themes, text sizes and spacings live in `widget/WidgetState.kt`, separate from the app theme;
+  the widget settings screen picks one of each. "Large" text and "Relaxed" spacing are the
+  widget's original, roomier look.
 - **Widget taps and `ItemActivity` share an extra name.** The widget passes the story ID as an
   action parameter whose key is `ItemActivity.EXTRA_ITEM_ID`. Change both together.
 - **Never put the article WebView inside another scroll container.** It is `match_parent` and

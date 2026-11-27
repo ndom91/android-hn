@@ -13,6 +13,8 @@ import kotlinx.serialization.json.Json
 object WidgetKeys {
     val section = stringPreferencesKey("section")
     val theme = stringPreferencesKey("theme")
+    val textSize = stringPreferencesKey("text_size")
+    val spacing = stringPreferencesKey("spacing")
     val stories = stringPreferencesKey("stories")
     val updatedAt = longPreferencesKey("updated_at")
     val loading = booleanPreferencesKey("loading")
@@ -47,5 +49,27 @@ enum class WidgetTheme(
 
     companion object {
         fun fromName(name: String?): WidgetTheme = entries.firstOrNull { it.name == name } ?: DARK
+    }
+}
+
+/** Text sizes, in sp, for the widget's header, story titles and points/comments line. */
+enum class WidgetTextSize(val label: String, val header: Int, val title: Int, val meta: Int) {
+    SMALL("Small", 14, 13, 11),
+    MEDIUM("Medium", 15, 14, 12),
+    LARGE("Large", 16, 15, 13);
+
+    companion object {
+        fun fromName(name: String?): WidgetTextSize = entries.firstOrNull { it.name == name } ?: MEDIUM
+    }
+}
+
+/** Vertical padding, in dp, around the header and around each story. */
+enum class WidgetSpacing(val label: String, val header: Int, val story: Int) {
+    COMPACT("Compact", 2, 4),
+    NORMAL("Normal", 4, 6),
+    RELAXED("Relaxed", 6, 8);
+
+    companion object {
+        fun fromName(name: String?): WidgetSpacing = entries.firstOrNull { it.name == name } ?: NORMAL
     }
 }

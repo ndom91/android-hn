@@ -64,6 +64,8 @@ private fun WidgetContent(prefs: Preferences) {
     val context = LocalContext.current
     val section = Section.fromName(prefs[WidgetKeys.section])
     val theme = WidgetTheme.fromName(prefs[WidgetKeys.theme])
+    val textSize = WidgetTextSize.fromName(prefs[WidgetKeys.textSize])
+    val spacing = WidgetSpacing.fromName(prefs[WidgetKeys.spacing])
     val stories = decodeWidgetStories(prefs[WidgetKeys.stories])
     val loading = prefs[WidgetKeys.loading] == true
     val error = prefs[WidgetKeys.error]
@@ -77,12 +79,12 @@ private fun WidgetContent(prefs: Preferences) {
             .padding(horizontal = 12.dp),
     ) {
         Row(
-            GlanceModifier.fillMaxWidth().padding(top = 6.dp, bottom = 6.dp),
+            GlanceModifier.fillMaxWidth().padding(vertical = spacing.header.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
                 section.title.uppercase(),
-                style = TextStyle(color = ColorProvider(theme.text), fontSize = 16.sp),
+                style = TextStyle(color = ColorProvider(theme.text), fontSize = textSize.header.sp),
                 maxLines = 1,
                 modifier = GlanceModifier
                     .defaultWeight()
@@ -94,7 +96,7 @@ private fun WidgetContent(prefs: Preferences) {
                 updatedAt != null -> DateFormat.getTimeFormat(context).format(Date(updatedAt))
                 else -> ""
             }
-            Text(status, style = TextStyle(color = ColorProvider(theme.secondary), fontSize = 13.sp))
+            Text(status, style = TextStyle(color = ColorProvider(theme.secondary), fontSize = textSize.meta.sp))
             Image(
                 provider = ImageProvider(R.drawable.ic_refresh),
                 contentDescription = "Refresh",
@@ -117,7 +119,7 @@ private fun WidgetContent(prefs: Preferences) {
         } else {
             LazyColumn {
                 items(stories, itemId = { it.id }) { story ->
-                    StoryItem(story, theme, section.hotThreshold)
+                    StoryItem(story, theme, textSize, spacing, section.hotThreshold)
                 }
             }
         }
@@ -125,16 +127,23 @@ private fun WidgetContent(prefs: Preferences) {
 }
 
 @Composable
-private fun StoryItem(story: WidgetStory, theme: WidgetTheme, hotThreshold: Int) {
-    fun meta(hot: Boolean) = TextStyle(color = ColorProvider(if (hot) HotOrange else theme.secondary), fontSize = 13.sp)
+private fun StoryItem(
+    story: WidgetStory,
+    theme: WidgetTheme,
+    textSize: WidgetTextSize,
+    spacing: WidgetSpacing,
+    hotThreshold: Int,
+) {
+    fun meta(hot: Boolean) =
+        TextStyle(color = ColorProvider(if (hot) HotOrange else theme.secondary), fontSize = textSize.meta.sp)
     Column(GlanceModifier.fillMaxWidth()) {
         Column(
             GlanceModifier
                 .fillMaxWidth()
-                .padding(top = 8.dp, bottom = 8.dp, start = 4.dp, end = 4.dp)
+                .padding(vertical = spacing.story.dp, horizontal = 4.dp)
                 .clickable(actionStartActivity<ItemActivity>(actionParametersOf(ItemIdKey to story.id))),
         ) {
-            Text(story.title, style = TextStyle(color = ColorProvider(theme.text), fontSize = 15.sp), maxLines = 3)
+            Text(story.title, style = TextStyle(color = ColorProvider(theme.text), fontSize = textSize.title.sp), maxLines = 3)
             Row {
                 Text("${story.score}p", style = meta(isHotScore(story.score, hotThreshold)))
                 Text(" - ", style = meta(false))

@@ -38,8 +38,8 @@ same way and it updates in place.
 
 - **Home-screen widget.** A resizable list of Top, Best, New, Ask, Show or Jobs stories, with
   points and comment counts that turn orange when a story is hot. It refreshes on its own every
-  30 minutes, or with a tap on its refresh button. Long-press it to change the section or switch
-  between dark, transparent and light themes.
+  30 minutes, or with a tap on its refresh button. Long-press it to change the section, switch
+  between dark, transparent and light themes, or pick its text size and spacing.
 - **Article and comments, side by side.** Tap a story to read the article in a full in-app
   browser, then swipe or tap over to the comments.
 - **Readable comment threads.** Replies hang off thread lines so you can see who answered whom,
