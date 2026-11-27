@@ -17,13 +17,14 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowUpward
 import androidx.compose.material.icons.rounded.UnfoldMore
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -56,13 +57,13 @@ import app.hn2.data.Comment
 import app.hn2.data.Story
 import app.hn2.ui.common.ErrorMessage
 import app.hn2.ui.common.Pill
-import app.hn2.ui.common.groupedShape
 import app.hn2.util.relativeTime
 
 /** Replies deeper than this line up with this level, so deep threads keep a readable width. */
 private const val MAX_INDENT_DEPTH = 5
-private val CardRadius = 24.dp
-private val CardPadding = 16.dp
+private val StoryTextRadius = 12.dp
+/** Space between the screen edge and a top-level comment. */
+private val EdgePadding = 16.dp
 private val AvatarSize = 20.dp
 /** Each reply level moves right by one avatar width, so a reply's line sits under its parent's avatar. */
 private val Indent = 20.dp
@@ -84,18 +85,18 @@ fun CommentsPage(
     LazyColumn(
         state = listState,
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 104.dp),
+        contentPadding = PaddingValues(top = 4.dp, bottom = 104.dp),
     ) {
         if (story.hasText) {
             item(key = "story-text") {
                 HtmlText(
                     story.text.orEmpty(),
                     Modifier
-                        .padding(bottom = 12.dp)
+                        .padding(horizontal = 12.dp, vertical = 8.dp)
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(CardRadius))
+                        .clip(RoundedCornerShape(StoryTextRadius))
                         .background(MaterialTheme.colorScheme.secondaryContainer)
-                        .padding(20.dp),
+                        .padding(16.dp),
                 )
             }
         }
@@ -117,9 +118,10 @@ fun CommentsPage(
                     modifier = Modifier.fillMaxWidth().padding(48.dp),
                 )
             }
-            else -> items(state.rows, key = { it.comment.id }) { row ->
+            else -> itemsIndexed(state.rows, key = { _, row -> row.comment.id }) { index, row ->
                 CommentItem(
                     row,
+                    dividerAbove = row.depth == 0 && (index > 0 || story.hasText),
                     isOp = row.comment.author == story.by,
                     voted = state.votes[row.comment.id]?.voted == true,
                     onToggle = onToggle,
@@ -145,6 +147,7 @@ fun CommentsPage(
 @Composable
 private fun CommentItem(
     row: CommentRow,
+    dividerAbove: Boolean,
     isOp: Boolean,
     voted: Boolean,
     onToggle: (Long) -> Unit,
@@ -154,15 +157,15 @@ private fun CommentItem(
     val comment = row.comment
     val colors = MaterialTheme.colorScheme
     val startsThread = row.depth == 0
-    val topPadding = if (startsThread) 16.dp else 10.dp
+    val topPadding = if (startsThread) 14.dp else 10.dp
     val level = row.depth.coerceAtMost(MAX_INDENT_DEPTH)
 
-    Box(modifier.padding(bottom = if (row.endsThread) 12.dp else 0.dp)) {
+    // Flat rows on the page background; a hairline between top-level threads groups them.
+    Column(modifier) {
+        if (dividerAbove) HorizontalDivider(color = colors.outlineVariant.copy(alpha = 0.6f))
         Column(
             Modifier
                 .fillMaxWidth()
-                .clip(groupedShape(first = startsThread, last = row.endsThread, outer = CardRadius))
-                .background(colors.surfaceContainer)
                 .combinedClickable(
                     onClickLabel = if (row.collapsed) "Expand" else "Collapse",
                     onLongClickLabel = "Comment actions",
@@ -172,10 +175,10 @@ private fun CommentItem(
                 )
                 .threadLines(row, topPadding, colors.outlineVariant)
                 .padding(
-                    start = CardPadding + Indent * level,
-                    end = CardPadding,
+                    start = EdgePadding + Indent * level,
+                    end = EdgePadding,
                     top = topPadding,
-                    bottom = if (row.endsThread) 16.dp else 6.dp,
+                    bottom = if (row.endsThread) 14.dp else 6.dp,
                 ),
         ) {
             CommentHeader(row, isOp, voted)
@@ -308,7 +311,7 @@ private fun Modifier.threadLines(row: CommentRow, topPadding: Dp, color: Color):
     return drawBehind {
         val stroke = LineWidth.toPx()
         // Level k's line runs under the avatars of the comments at depth k - 1.
-        fun lineX(k: Int) = (CardPadding + Indent * (k - 1) + AvatarSize / 2).toPx()
+        fun lineX(k: Int) = (EdgePadding + Indent * (k - 1) + AvatarSize / 2).toPx()
         fun line(x: Float) = drawLine(color, Offset(x, 0f), Offset(x, size.height), stroke, StrokeCap.Round)
 
         for (k in 1 until level) {
@@ -319,7 +322,7 @@ private fun Modifier.threadLines(row: CommentRow, topPadding: Dp, color: Color):
 
         val y = (topPadding + AvatarSize / 2).toPx()
         val r = ElbowRadius.toPx()
-        val avatarStart = (CardPadding + Indent * level).toPx()
+        val avatarStart = (EdgePadding + Indent * level).toPx()
         val branch = Path().apply {
             moveTo(x, 0f)
             lineTo(x, y - r)

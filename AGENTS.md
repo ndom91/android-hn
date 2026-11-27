@@ -95,7 +95,7 @@ row flattening, HTML parsing, formatting) out of composables so it stays testabl
   cancelled job as an error.
 - **`ItemActivity` handles its own configuration changes** so rotating doesn't reload the article.
 - **Comment rows are flat.** `flattenComments` turns the tree into `CommentRow`s with depth, collapse
-  state, which thread lines continue (`linesContinue`) and whether the row closes its thread card.
+  state, which thread lines continue (`linesContinue`) and whether the row ends its thread.
   The comments page only draws rows.
 - Write plain, explicit Kotlin. Prefer small focused files and comments that explain why, not what.
 

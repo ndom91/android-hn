@@ -298,8 +298,8 @@ private fun Header(
                 Column(
                     Modifier
                         .collapsible()
-                        .padding(start = 20.dp, end = 20.dp, bottom = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                        .padding(start = 20.dp, end = 20.dp, bottom = 4.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     domainOf(story.url)?.let {
                         Text(it, style = MaterialTheme.typography.labelLarge, color = colors.primary)
