@@ -2,7 +2,6 @@ package app.hn2.ui.theme
 
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
@@ -60,9 +59,6 @@ private val DarkFallback = darkColorScheme(
     outline = Color(0xFFA08D86),
     outlineVariant = Color(0xFF53433E),
 )
-
-/** Thread line colors for reply depth 1, 2, 3, …, taken from the current scheme. */
-fun ColorScheme.threadColors(): List<Color> = listOf(primary, tertiary, secondary, outline)
 
 @Composable
 fun Hn2Theme(content: @Composable () -> Unit) {

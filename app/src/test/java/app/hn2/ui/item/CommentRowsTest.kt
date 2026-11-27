@@ -19,6 +19,15 @@ class CommentRowsTest {
     }
 
     @Test
+    fun `thread lines continue only while more siblings follow`() {
+        val rows = flattenComments(tree, emptySet())
+        assertEquals(
+            listOf(emptyList(), listOf(true), listOf(true, false), listOf(false), emptyList()),
+            rows.map { it.linesContinue },
+        )
+    }
+
+    @Test
     fun `collapsed comments hide their replies but stay visible`() {
         val rows = flattenComments(tree, setOf(2L))
         assertEquals(listOf(1L, 2L, 4L, 5L), rows.map { it.comment.id })
