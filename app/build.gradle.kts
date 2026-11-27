@@ -16,7 +16,7 @@ android {
         // CI passes its run number so every build is a newer version.
         versionCode = System.getenv("VERSION_CODE")?.toIntOrNull() ?: 1
         // The latest released version. CI bumps the patch for each release; raise it here for a new minor.
-        versionName = "0.1.6"
+        versionName = "0.1.7"
     }
 
     signingConfigs {
