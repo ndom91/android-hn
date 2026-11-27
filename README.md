@@ -14,12 +14,14 @@ phone it probably won't be the cyan shown in these screenshots.
 
 <table>
   <tr>
-    <td align="center" width="33%"><img src="docs/screenshots/widget.jpg" alt="The hn2 widget on a home screen, listing top stories"></td>
-    <td align="center" width="33%"><img src="docs/screenshots/comments.jpg" alt="A comment thread with a reply hanging off a thread line"></td>
-    <td align="center" width="33%"><img src="docs/screenshots/article.jpg" alt="An article open in the in-app browser"></td>
+    <td align="center" width="25%"><img src="docs/screenshots/widget.jpg" alt="The hn2 widget on a home screen, listing top stories"></td>
+    <td align="center" width="25%"><img src="docs/screenshots/widget-settings.jpg" alt="Widget settings with a live preview, theme, text size and spacing options"></td>
+    <td align="center" width="25%"><img src="docs/screenshots/comments.jpg" alt="A comment thread with a reply hanging off a thread line"></td>
+    <td align="center" width="25%"><img src="docs/screenshots/article.jpg" alt="An article open in the in-app browser"></td>
   </tr>
   <tr>
     <td align="center" valign="middle">Top stories on your home screen</td>
+    <td align="center" valign="middle">Make the widget your own</td>
     <td align="center" valign="middle">Threaded comments</td>
     <td align="center" valign="middle">The article, one swipe away</td>
   </tr>
