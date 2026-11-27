@@ -295,17 +295,14 @@ private fun WidgetPreview(settings: WidgetSettings, stories: List<WidgetStory>) 
     val theme = settings.theme
     val sizes = settings.textSize
     val rankColor = if (settings.orangeRanks) HnOrange else theme.text
-    // The same bundled fonts as the widget: JetBrains Mono for [mono] text, Inter Bold for titles.
-    fun style(size: Int, color: Color, mono: Boolean = false, bold: Boolean = false, title: Boolean = false) = TextStyle(
+    // JetBrains Mono for [mono] text, as the widget's images and meta line use; titles are the
+    // phone's font in bold, like the widget's.
+    fun style(size: Int, color: Color, mono: Boolean = false, bold: Boolean = false) = TextStyle(
         color = color,
         fontSize = size.sp,
         lineHeight = (size * 1.3f).sp,
-        fontFamily = when {
-            mono -> JetBrainsMono
-            title -> InterBold
-            else -> null
-        },
-        fontWeight = if (bold || title) FontWeight.Bold else null,
+        fontFamily = if (mono) JetBrainsMono else null,
+        fontWeight = if (bold) FontWeight.Bold else null,
     )
 
     Box(
@@ -348,7 +345,7 @@ private fun WidgetPreview(settings: WidgetSettings, stories: List<WidgetStory>) 
                         modifier = Modifier.width((sizes.rank * 1.2f + 10).dp),
                     )
                     Column(Modifier.weight(1f)) {
-                        Text(story.title, style = style(sizes.title, theme.text, title = true), maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        Text(story.title, style = style(sizes.title, theme.text, bold = true), maxLines = 2, overflow = TextOverflow.Ellipsis)
                         Text(
                             story.meta(),
                             style = style(sizes.meta, theme.secondary, mono = true),

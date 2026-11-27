@@ -14,9 +14,6 @@ import androidx.core.content.res.ResourcesCompat
 import app.hn2.R
 import kotlin.math.ceil
 
-/** The design's title font, Inter Bold (SIL Open Font License, see licenses/). */
-val InterBold = FontFamily(Font(R.font.inter_bold, FontWeight.Bold))
-
 /** The design's monospace font, JetBrains Mono (SIL Open Font License, see licenses/). */
 val JetBrainsMono = FontFamily(
     Font(R.font.jetbrains_mono_regular, FontWeight.Normal),

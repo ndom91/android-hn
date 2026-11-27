@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  A widget story title. Glance can only use the phone's fonts, and phones with a custom system font
-  may have no bold at all, so the title is a plain TextView set in the bundled Inter Bold.
+  A widget story title, in the phone's font. It's a plain TextView so the widget can make it bold
+  with a paint flag (see storyText in StoriesWidget.kt): phone fonts without a bold weight ignore
+  both Glance's FontWeight.Bold and textStyle="bold", and some phones replace any fontFamily too.
 -->
 <TextView xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/title"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:ellipsize="end"
-    android:fontFamily="@font/inter_bold"
     android:maxLines="2" />

@@ -76,10 +76,12 @@ row flattening, HTML parsing, formatting) out of composables so it stays testabl
   numbers are drawn with the bundled JetBrains Mono (`res/font/`, OFL licenses in `licenses/`) by
   `MonoText` into bitmaps. Ranks are alpha-only bitmaps tinted by the widget, because all of a
   widget's bitmaps travel in one update with a size limit (about 1 MB); keep new images small.
-- **Widget titles and meta lines are plain TextViews in bundled fonts** (`widget_story_title.xml`
-  in Inter Bold, `widget_story_meta.xml` in JetBrains Mono, embedded with `AndroidRemoteViews`).
-  Glance's `Text` only uses the phone's fonts, and on a phone whose font has no bold, neither
-  Glance's `FontWeight.Bold` nor a TextView's `textStyle="bold"` made titles bold.
+- **Widget titles and meta lines are plain TextViews** (`widget_story_title.xml`,
+  `widget_story_meta.xml`, embedded with `AndroidRemoteViews`). On a test phone the home screen
+  drew all widget TextView text in the system font, ignoring `android:fontFamily` (bundled fonts
+  included), and that font has no bold, so Glance's `FontWeight.Bold` and `textStyle="bold"`
+  did nothing. Titles are bolded with the `FAKE_BOLD_TEXT_FLAG` paint flag instead (`storyText`).
+  The meta layout still asks for JetBrains Mono, which applies on phones that allow it.
 - **Widget taps and `ItemActivity` share an extra name.** The widget passes the story ID as an
   action parameter whose key is `ItemActivity.EXTRA_ITEM_ID`. Change both together.
 - **Never put the article WebView inside another scroll container.** It is `match_parent` and

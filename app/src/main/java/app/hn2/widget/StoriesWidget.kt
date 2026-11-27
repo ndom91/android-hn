@@ -1,6 +1,7 @@
 package app.hn2.widget
 
 import android.content.Context
+import android.graphics.Paint
 import android.text.format.DateFormat
 import android.util.TypedValue
 import android.widget.RemoteViews
@@ -179,11 +180,11 @@ private fun StoryItem(
         Column(GlanceModifier.defaultWeight()) {
             val context = LocalContext.current
             AndroidRemoteViews(
-                bundledFontText(context, R.layout.widget_story_title, R.id.title, story.title, theme.text, sizes.title),
+                storyText(context, R.layout.widget_story_title, R.id.title, story.title, theme.text, sizes.title, bold = true),
                 GlanceModifier.fillMaxWidth(),
             )
             AndroidRemoteViews(
-                bundledFontText(context, R.layout.widget_story_meta, R.id.meta, story.meta(), theme.secondary, sizes.meta),
+                storyText(context, R.layout.widget_story_meta, R.id.meta, story.meta(), theme.secondary, sizes.meta),
                 GlanceModifier.fillMaxWidth().padding(top = 2.dp),
             )
         }
@@ -191,12 +192,25 @@ private fun StoryItem(
 }
 
 /**
- * Text in one of the app's bundled fonts. Glance's Text can only use the phone's fonts, so this
- * fills in a TextView [layout] whose `android:fontFamily` names the bundled font.
+ * Fills in a widget TextView [layout]. [bold] thickens the text with a paint flag rather than a
+ * font weight, because on some phones the home screen draws widget text in the system font
+ * whatever the layout asks for, and that font may have no bold.
  */
-private fun bundledFontText(context: Context, layout: Int, viewId: Int, text: String, color: Color, sizeSp: Int) =
-    RemoteViews(context.packageName, layout).apply {
-        setTextViewText(viewId, text)
-        setTextColor(viewId, color.toArgb())
-        setTextViewTextSize(viewId, TypedValue.COMPLEX_UNIT_SP, sizeSp.toFloat())
-    }
+private fun storyText(
+    context: Context,
+    layout: Int,
+    viewId: Int,
+    text: String,
+    color: Color,
+    sizeSp: Int,
+    bold: Boolean = false,
+) = RemoteViews(context.packageName, layout).apply {
+    setTextViewText(viewId, text)
+    setTextColor(viewId, color.toArgb())
+    setTextViewTextSize(viewId, TypedValue.COMPLEX_UNIT_SP, sizeSp.toFloat())
+    if (bold) setInt(viewId, "setPaintFlags", BoldPaintFlags)
+}
+
+// A TextView's usual paint flags, plus fake bold.
+private const val BoldPaintFlags = Paint.ANTI_ALIAS_FLAG or Paint.SUBPIXEL_TEXT_FLAG or
+    Paint.DEV_KERN_TEXT_FLAG or Paint.FAKE_BOLD_TEXT_FLAG
