@@ -13,7 +13,8 @@ android {
         applicationId = "app.hn2"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
+        // CI passes its run number so every build is a newer version.
+        versionCode = System.getenv("VERSION_CODE")?.toIntOrNull() ?: 1
         versionName = "0.1.0"
     }
 
