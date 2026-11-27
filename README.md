@@ -9,8 +9,7 @@
 hn2 is a modern take on [Materialistic](https://github.com/hidroh/materialistic), which hasn't been
 maintained since 2019. It keeps what made Materialistic great, a glanceable widget and a two-tab
 article and comments view, and rebuilds everything else with Material You. Like other Material You
-apps, hn2 uses the color palette Android generates from your wallpaper (Android 12+), so on your
-phone it probably won't be the cyan shown in these screenshots.
+apps, hn2 uses the color palette Android generates from your wallpaper (Android 12+).
 
 <table>
   <tr>
