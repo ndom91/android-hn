@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -175,34 +176,38 @@ private fun ConfigScreen(
             }
         },
     ) { padding ->
-        Column(
-            Modifier
-                .padding(padding)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(28.dp),
-        ) {
-            WidgetPreview(settings, stories)
-
-            Setting("Stories") {
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Section.entries.forEach {
-                        FilterChip(selected = it == section, onClick = { section = it }, label = { Text(it.title) })
+        Column(Modifier.padding(padding).fillMaxSize()) {
+            // The preview stays put while the options scroll, so every change is visible as you make it.
+            Box(Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
+                WidgetPreview(settings, stories)
+            }
+            Column(
+                Modifier
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState())
+                    .padding(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(28.dp),
+            ) {
+                Setting("Stories") {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Section.entries.forEach {
+                            FilterChip(selected = it == section, onClick = { section = it }, label = { Text(it.title) })
+                        }
                     }
                 }
-            }
-            Setting("Theme") {
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    WidgetTheme.entries.forEach {
-                        ThemeSwatch(it, selected = it == theme, onClick = { theme = it }, modifier = Modifier.weight(1f))
+                Setting("Theme") {
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        WidgetTheme.entries.forEach {
+                            ThemeSwatch(it, selected = it == theme, onClick = { theme = it }, modifier = Modifier.weight(1f))
+                        }
                     }
                 }
-            }
-            Setting("Text size") {
-                Segmented(WidgetTextSize.entries, textSize, { it.label }) { textSize = it }
-            }
-            Setting("Spacing") {
-                Segmented(WidgetSpacing.entries, spacing, { it.label }) { spacing = it }
+                Setting("Text size") {
+                    Segmented(WidgetTextSize.entries, textSize, { it.label }) { textSize = it }
+                }
+                Setting("Spacing") {
+                    Segmented(WidgetSpacing.entries, spacing, { it.label }) { spacing = it }
+                }
             }
         }
     }
