@@ -17,6 +17,7 @@ import androidx.work.WorkerParameters
 import app.hn2.data.Section
 import app.hn2.data.Story
 import app.hn2.repository
+import app.hn2.util.runSuspendCatching
 import java.util.concurrent.TimeUnit
 
 /** Fetches stories for every placed widget, once per distinct section. */
@@ -31,7 +32,7 @@ class WidgetRefreshWorker(context: Context, params: WorkerParameters) : Coroutin
         for (id in ids) {
             val prefs = getAppWidgetState(context, PreferencesGlanceStateDefinition, id)
             val section = Section.fromName(prefs[WidgetKeys.section])
-            val result = fetched.getOrPut(section) { runCatching { context.repository.stories(section) } }
+            val result = fetched.getOrPut(section) { runSuspendCatching { context.repository.stories(section) } }
             updateAppWidgetState(context, id) { state ->
                 state[WidgetKeys.loading] = false
                 result

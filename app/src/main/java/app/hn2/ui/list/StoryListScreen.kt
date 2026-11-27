@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.rounded.ArrowUpward
@@ -28,6 +27,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
@@ -39,6 +39,7 @@ import app.hn2.data.Story
 import app.hn2.repository
 import app.hn2.ui.common.ErrorMessage
 import app.hn2.ui.common.Pill
+import app.hn2.ui.common.groupedShape
 import app.hn2.ui.item.ItemActivity
 import app.hn2.util.domainOf
 import app.hn2.util.isHotComments
@@ -90,7 +91,7 @@ fun StoryListScreen(initialSection: Section) {
                         StoryCard(
                             story = story,
                             hotThreshold = state.section.hotThreshold,
-                            shape = segmentShape(index, state.stories.size),
+                            shape = groupedShape(index == 0, index == state.stories.lastIndex, OuterRadius, InnerRadius),
                             onOpen = { context.startActivity(ItemActivity.intent(context, story.id)) },
                             onOpenComments = {
                                 context.startActivity(ItemActivity.intent(context, story.id, startOnComments = true))
@@ -122,19 +123,11 @@ private fun SectionChips(selected: Section, onSelect: (Section) -> Unit) {
     }
 }
 
-/** Grouped-list shape: big corners on the outside of the group, small ones between items. */
-private fun segmentShape(index: Int, count: Int) = RoundedCornerShape(
-    topStart = if (index == 0) OuterRadius else InnerRadius,
-    topEnd = if (index == 0) OuterRadius else InnerRadius,
-    bottomStart = if (index == count - 1) OuterRadius else InnerRadius,
-    bottomEnd = if (index == count - 1) OuterRadius else InnerRadius,
-)
-
 @Composable
 private fun StoryCard(
     story: Story,
     hotThreshold: Int,
-    shape: RoundedCornerShape,
+    shape: Shape,
     onOpen: () -> Unit,
     onOpenComments: () -> Unit,
 ) {

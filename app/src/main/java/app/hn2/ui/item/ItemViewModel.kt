@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import app.hn2.data.Comment
 import app.hn2.data.HnRepository
 import app.hn2.data.Story
+import app.hn2.util.runSuspendCatching
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -27,14 +29,17 @@ class ItemViewModel(private val repository: HnRepository, private val itemId: Lo
     private val _state = MutableStateFlow(ItemUiState())
     val state: StateFlow<ItemUiState> = _state.asStateFlow()
 
+    private var loadJob: Job? = null
+
     init {
         load()
     }
 
     fun load() {
-        viewModelScope.launch {
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch {
             _state.update { it.copy(storyError = null, commentsError = null) }
-            val story = runCatching { repository.story(itemId) }.getOrElse { error ->
+            val story = runSuspendCatching { repository.story(itemId) }.getOrElse { error ->
                 _state.update { it.copy(storyError = error.message ?: "Couldn't load story") }
                 return@launch
             }
@@ -43,7 +48,7 @@ class ItemViewModel(private val repository: HnRepository, private val itemId: Lo
                 return@launch
             }
             _state.update { it.copy(story = story) }
-            runCatching { repository.comments(story) }
+            runSuspendCatching { repository.comments(story) }
                 .onSuccess { comments -> _state.update { it.copy(comments = comments) } }
                 .onFailure { error ->
                     _state.update { it.copy(commentsError = error.message ?: "Couldn't load comments") }

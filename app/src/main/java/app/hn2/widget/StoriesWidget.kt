@@ -43,7 +43,6 @@ import app.hn2.R
 import app.hn2.data.Section
 import app.hn2.ui.item.ItemActivity
 import app.hn2.ui.list.MainActivity
-import app.hn2.ui.theme.HotOrange
 import app.hn2.util.isHotComments
 import app.hn2.util.isHotScore
 import java.util.Date

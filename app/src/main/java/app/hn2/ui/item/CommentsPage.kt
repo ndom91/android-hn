@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import app.hn2.data.Story
 import app.hn2.ui.common.ErrorMessage
 import app.hn2.ui.common.Pill
+import app.hn2.ui.common.groupedShape
 import app.hn2.ui.theme.threadColors
 import app.hn2.util.relativeTime
 
@@ -57,10 +58,10 @@ fun CommentsPage(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 104.dp),
     ) {
-        if (!story.text.isNullOrBlank()) {
+        if (story.hasText) {
             item(key = "story-text") {
                 HtmlText(
-                    story.text,
+                    story.text.orEmpty(),
                     Modifier
                         .padding(bottom = 12.dp)
                         .fillMaxWidth()
@@ -101,12 +102,7 @@ private fun CommentItem(row: CommentRow, isOp: Boolean, onToggle: (Long) -> Unit
     val comment = row.comment
     val colors = MaterialTheme.colorScheme
     val startsThread = row.depth == 0
-    val shape = RoundedCornerShape(
-        topStart = if (startsThread) CardRadius else 0.dp,
-        topEnd = if (startsThread) CardRadius else 0.dp,
-        bottomStart = if (row.endsThread) CardRadius else 0.dp,
-        bottomEnd = if (row.endsThread) CardRadius else 0.dp,
-    )
+    val shape = groupedShape(first = startsThread, last = row.endsThread, outer = CardRadius)
     val indentDepth = row.depth.coerceAtMost(MAX_INDENT_DEPTH)
 
     Box(Modifier.padding(bottom = if (row.endsThread) 12.dp else 0.dp)) {
@@ -174,18 +170,19 @@ private fun CommentHeader(row: CommentRow, isOp: Boolean) {
         )
         if (row.collapsed) {
             Pill("+${comment.descendantCount + 1}")
+            Icon(Icons.Rounded.ExpandMore, "Expand", Modifier.padding(start = 4.dp).size(20.dp), tint = colors.onSurfaceVariant)
         } else if (comment.children.isNotEmpty()) {
             Icon(Icons.Rounded.ExpandLess, "Collapse", Modifier.size(20.dp), tint = colors.onSurfaceVariant)
-        }
-        if (row.collapsed) {
-            Icon(Icons.Rounded.ExpandMore, "Expand", Modifier.padding(start = 4.dp).size(20.dp), tint = colors.onSurfaceVariant)
         }
     }
 }
 
+private val Story.hasText: Boolean get() = !text.isNullOrBlank()
+
 /** Scrolls to the next top-level comment below the one at the top of the screen. */
-suspend fun scrollToNextThread(listState: LazyListState, state: ItemUiState, hasStoryText: Boolean) {
-    val offset = if (hasStoryText) 1 else 0
+suspend fun scrollToNextThread(listState: LazyListState, state: ItemUiState, story: Story) {
+    // The story's own text, when it has some, is the list's first item.
+    val offset = if (story.hasText) 1 else 0
     val current = listState.firstVisibleItemIndex - offset
     val next = state.rows.withIndex().firstOrNull { (index, row) -> index > current && row.depth == 0 }
     if (next != null) listState.animateScrollToItem(next.index + offset)

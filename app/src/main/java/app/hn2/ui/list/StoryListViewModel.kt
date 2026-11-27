@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import app.hn2.data.HnRepository
 import app.hn2.data.Section
 import app.hn2.data.Story
+import app.hn2.util.runSuspendCatching
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -40,7 +41,7 @@ class StoryListViewModel(private val repository: HnRepository, initial: Section)
         val section = _state.value.section
         _state.update { it.copy(loading = true, error = null) }
         loadJob = viewModelScope.launch {
-            runCatching { repository.stories(section) }
+            runSuspendCatching { repository.stories(section) }
                 .onSuccess { stories -> _state.update { it.copy(stories = stories, loading = false) } }
                 .onFailure { error ->
                     _state.update { it.copy(loading = false, error = error.message ?: "Couldn't load stories") }

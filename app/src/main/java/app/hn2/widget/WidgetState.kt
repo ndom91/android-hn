@@ -31,6 +31,9 @@ fun encodeWidgetStories(stories: List<Story>): String =
 fun decodeWidgetStories(raw: String?): List<WidgetStory> =
     raw?.let { runCatching { json.decodeFromString<List<WidgetStory>>(it) }.getOrNull() }.orEmpty()
 
+/** Points/comments over the hot threshold. The same in every widget theme. */
+val HotOrange = Color(0xFFFFA726)
+
 enum class WidgetTheme(
     val label: String,
     val background: Color,

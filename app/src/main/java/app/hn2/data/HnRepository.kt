@@ -1,5 +1,6 @@
 package app.hn2.data
 
+import app.hn2.util.runSuspendCatching
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -13,17 +14,14 @@ class HnRepository(private val api: HnApi) {
     suspend fun stories(section: Section, limit: Int = 30): List<Story> = coroutineScope {
         api.storyIds(section)
             .take(limit)
-            .map { id -> async { runCatching { api.item(id) }.getOrNull() } }
+            .map { id -> async { runSuspendCatching { api.item(id) }.getOrNull() } }
             .awaitAll()
             .filterNotNull()
             .filter { !it.dead && !it.deleted }
             .onEach { stories[it.id] = it }
     }
 
-    suspend fun story(id: Long, refresh: Boolean = false): Story? {
-        if (!refresh) stories[id]?.let { return it }
-        return api.item(id)?.also { stories[id] = it }
-    }
+    suspend fun story(id: Long): Story? = stories[id] ?: api.item(id)?.also { stories[id] = it }
 
     /**
      * Loads the full comment tree from Algolia. Algolia doesn't return comments in HN's ranked

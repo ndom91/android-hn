@@ -61,9 +61,6 @@ private val DarkFallback = darkColorScheme(
     outlineVariant = Color(0xFF53433E),
 )
 
-/** Points/comments over the hot threshold in the widget, which keeps its own fixed look. */
-val HotOrange = Color(0xFFFFA726)
-
 /** Thread line colors for reply depth 1, 2, 3, …, taken from the current scheme. */
 fun ColorScheme.threadColors(): List<Color> = listOf(primary, tertiary, secondary, outline)
 

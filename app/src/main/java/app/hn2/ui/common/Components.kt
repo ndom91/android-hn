@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -17,6 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 /** A small rounded label with an optional icon, e.g. points or comment count. */
@@ -47,6 +49,14 @@ fun Pill(
         Surface(modifier = modifier, shape = CircleShape, color = container, content = body)
     }
 }
+
+/** Shape of one item in a grouped list: [outer] corners at the ends of the group, [inner] between items. */
+fun groupedShape(first: Boolean, last: Boolean, outer: Dp, inner: Dp = 0.dp) = RoundedCornerShape(
+    topStart = if (first) outer else inner,
+    topEnd = if (first) outer else inner,
+    bottomStart = if (last) outer else inner,
+    bottomEnd = if (last) outer else inner,
+)
 
 @Composable
 fun ErrorMessage(message: String, onRetry: () -> Unit, modifier: Modifier = Modifier) {

@@ -69,6 +69,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import app.hn2.data.Section
 import app.hn2.data.Story
 import app.hn2.repository
 import app.hn2.ui.common.ErrorMessage
@@ -180,7 +181,7 @@ private fun StoryContent(
                 if (onArticle) {
                     fullscreen = !fullscreen
                 } else {
-                    scope.launch { scrollToNextThread(listState, state, hasStoryText = !story.text.isNullOrBlank()) }
+                    scope.launch { scrollToNextThread(listState, state, story) }
                 }
             },
             modifier = Modifier
@@ -244,7 +245,7 @@ private fun Header(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        Pill("${story.score}", icon = Icons.Rounded.ArrowUpward, highlighted = isHotScore(story.score, 100))
+                        Pill("${story.score}", icon = Icons.Rounded.ArrowUpward, highlighted = isHotScore(story.score, Section.TOP.hotThreshold))
                         Pill(relativeTime(story.time), icon = Icons.Outlined.Schedule)
                         story.by?.let { Pill(it, icon = Icons.Outlined.Person) }
                     }
