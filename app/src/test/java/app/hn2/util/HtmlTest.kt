@@ -31,4 +31,9 @@ class HtmlTest {
         assertEquals("it's a/b & c", decodeEntities("it&#x27;s a&#x2F;b &amp; c"))
         assertEquals("&unknown;", decodeEntities("&unknown;"))
     }
+
+    @Test
+    fun `plain text becomes escaped paragraphs`() {
+        assertEquals("a &lt;b&gt; &amp; c<p>second\nline", plainTextToHtml("a <b> & c\n\n\nsecond\nline\n"))
+    }
 }

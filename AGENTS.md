@@ -32,13 +32,14 @@ All code is in the single `:app` module, under `app/src/main/java/app/hn2/`:
 
 | Package | What's there |
 |---|---|
-| `Hn2App.kt` | Application class. Builds the shared OkHttp client and `HnRepository`; `Context.repository` gets it. |
-| `data/` | `HnApi` (Firebase + Algolia), `HnRepository` (fetching, in-memory story cache, comment tree), models and `Section`. |
+| `Hn2App.kt` | Application class. Builds the shared OkHttp client, `HnRepository` and `HnAccount`; `Context.repository` and `Context.account` get them. |
+| `data/` | `HnApi` (Firebase + Algolia), `HnRepository` (fetching, in-memory story cache, comment tree), `HnAccount` (login, votes, comments), the cancellable `fetch` helper, models and `Section`. |
+| `ui/account/` | The login dialog and the account button in the story list's top bar. |
 | `ui/list/` | `MainActivity` and the story list screen with section chips. |
-| `ui/item/` | `ItemActivity`: the story screen with its collapsing header, the Comments/Article pager, the article WebView and the comments list. |
+| `ui/item/` | `ItemActivity`: the story screen with its collapsing header, the Comments/Article pager, the article WebView, the comments list, the long-press comment actions and the comment box. |
 | `ui/common/`, `ui/theme/` | Shared composables (`Pill`, `ErrorMessage`, `groupedShape`) and the Material You theme. |
 | `widget/` | The Glance widget, its stored state, refresh worker, refresh action and configuration activity. |
-| `util/` | Pure helpers: formatting, HN HTML parsing, `runSuspendCatching`. |
+| `util/` | Pure helpers: formatting, comment HTML parsing, HN page parsing (`HnPages.kt`), `runSuspendCatching`. |
 
 Unit tests mirror this layout under `app/src/test/`. Keep logic that can be tested (tree building,
 row flattening, HTML parsing, formatting) out of composables so it stays testable on the JVM.
@@ -50,6 +51,16 @@ row flattening, HTML parsing, formatting) out of composables so it stays testabl
 - Comment trees come from Algolia's `items/{id}` in one request. Algolia returns comments
   oldest-first, so `buildCommentTree` re-sorts the top level by the story's `kids`, which are in
   HN's ranked order. Nested replies stay chronological. Deleted comments with no replies are pruned.
+- Logging in, voting and commenting go through news.ycombinator.com itself, since HN has no write
+  API. `HnAccount` posts the login form and keeps HN's `user` cookie (not the password) in the
+  `account` SharedPreferences; backup is off so the cookie stays on the device. A signed-in story
+  page carries a vote `auth` token for every item on it and the `hmac` for its comment form;
+  replies fetch `reply?id=` for theirs. HN answers a successful action with a redirect and a
+  failure with a short text page, which becomes the error message. If a signed-in page no longer
+  shows the `id='me'` profile link, the session has ended and the app logs out.
+- Algolia lists new comments after a few minutes, so a comment you post is added to the tree
+  locally (`withReply`) with a negative stand-in id. It can't be voted on or replied to until a
+  reload picks up the real one.
 
 ## Conventions and gotchas
 

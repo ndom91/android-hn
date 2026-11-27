@@ -59,3 +59,13 @@ fun decodeEntities(text: String): String = ENTITY.replace(text) { match ->
         else -> NAMED[body]
     } ?: match.value
 }
+
+/**
+ * Your own comment as HN would render it, for showing it before Algolia has it: escaped text,
+ * with blank lines as paragraph breaks.
+ */
+fun plainTextToHtml(text: String): String =
+    text.split(Regex("\\n\\s*\\n"))
+        .map { paragraph -> paragraph.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").trim() }
+        .filter { it.isNotEmpty() }
+        .joinToString("<p>")

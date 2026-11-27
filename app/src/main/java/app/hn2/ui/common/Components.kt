@@ -21,18 +21,25 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
-/** A small rounded label with an optional icon, e.g. points or comment count. */
+/**
+ * A small rounded label with an optional icon, e.g. points or comment count. [highlighted] tints it
+ * (a hot story); [selected] fills it with the primary color (a story you've upvoted).
+ */
 @Composable
 fun Pill(
     text: String,
     modifier: Modifier = Modifier,
     icon: ImageVector? = null,
     highlighted: Boolean = false,
+    selected: Boolean = false,
     onClick: (() -> Unit)? = null,
 ) {
     val colors = MaterialTheme.colorScheme
-    val container = if (highlighted) colors.primaryContainer else colors.surfaceContainerHighest
-    val content = if (highlighted) colors.onPrimaryContainer else colors.onSurfaceVariant
+    val (container, content) = when {
+        selected -> colors.primary to colors.onPrimary
+        highlighted -> colors.primaryContainer to colors.onPrimaryContainer
+        else -> colors.surfaceContainerHighest to colors.onSurfaceVariant
+    }
     val body = @Composable {
         Row(
             Modifier.padding(horizontal = 10.dp, vertical = 4.dp),

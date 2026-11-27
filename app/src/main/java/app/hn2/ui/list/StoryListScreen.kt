@@ -37,6 +37,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import app.hn2.data.Section
 import app.hn2.data.Story
 import app.hn2.repository
+import app.hn2.ui.account.AccountButton
 import app.hn2.ui.common.ErrorMessage
 import app.hn2.ui.common.Pill
 import app.hn2.ui.common.groupedShape
@@ -65,6 +66,7 @@ fun StoryListScreen(initialSection: Section) {
                 // A plain top bar with a large title: LargeTopAppBar keeps an empty toolbar row above it.
                 TopAppBar(
                     title = { Text(state.section.title, style = MaterialTheme.typography.headlineMedium) },
+                    actions = { AccountButton() },
                     scrollBehavior = scrollBehavior,
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.surface,

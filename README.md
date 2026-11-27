@@ -45,16 +45,22 @@ same way and it updates in place.
 - **Readable comment threads.** Replies hang off thread lines so you can see who answered whom,
   and each author gets a colored avatar so you can follow them through a thread. Tap a comment to
   collapse it, or use the arrow button to jump to the next thread.
+- **Vote and comment.** Log in with your HN account from the account button on the story list.
+  Tap a story's score to upvote it, long-press a comment to upvote or reply to it, or use
+  "Add a comment" at the top of a thread.
 - **Material You.** The app picks up your wallpaper colors and follows light and dark mode.
 - **HN links open in the app.** `news.ycombinator.com/item?id=…` links can open straight in hn2.
-
-hn2 is read-only for now. Logging in, voting and replying are planned.
 
 ## Privacy
 
 Stories come from the official [Hacker News API](https://github.com/HackerNews/API) and comments
 from [Algolia's HN Search API](https://hn.algolia.com/api). hn2 has no account, server or
 analytics of its own.
+
+When you log in, your username and password go only to news.ycombinator.com, the same as logging
+in on the website. hn2 doesn't store your password; it keeps HN's login cookie on your phone, in
+storage only hn2 can read and that isn't included in Android backups. Log out from the account
+button to delete it.
 
 ## Contributing
 

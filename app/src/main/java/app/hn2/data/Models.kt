@@ -45,3 +45,19 @@ data class Comment(
     val descendantCount: Int = children.sumOf { 1 + it.descendantCount }
     val isDeleted: Boolean get() = author == null && html == null
 }
+
+/**
+ * The tree with [reply] added under [parentId]: last among its siblings, matching HN's
+ * chronological replies. A [parentId] not in the tree, i.e. the story, puts it first at the top.
+ */
+fun List<Comment>.withReply(parentId: Long, reply: Comment): List<Comment> {
+    fun insert(comments: List<Comment>): List<Comment> = comments.map { comment ->
+        when {
+            comment.id == parentId -> comment.copy(children = comment.children + reply)
+            comment.descendantCount > 0 -> comment.copy(children = insert(comment.children))
+            else -> comment
+        }
+    }
+    val inserted = insert(this)
+    return if (inserted == this) listOf(reply) + this else inserted
+}

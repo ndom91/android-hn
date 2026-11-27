@@ -1,0 +1,146 @@
+package app.hn2.ui.account
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.Logout
+import androidx.compose.material.icons.outlined.AccountCircle
+import androidx.compose.material.icons.rounded.AccountCircle
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.hn2.account
+import app.hn2.util.runSuspendCatching
+import kotlinx.coroutines.launch
+
+/** The signed-in HN username, or null. */
+@Composable
+fun signedInUser(): String? {
+    val account = LocalContext.current.account
+    val user by account.user.collectAsStateWithLifecycle()
+    return user
+}
+
+/** Top-bar button: log in, or show who you're logged in as with a way to log out. */
+@Composable
+fun AccountButton() {
+    val account = LocalContext.current.account
+    val user = signedInUser()
+    var showLogin by remember { mutableStateOf(false) }
+    var showMenu by remember { mutableStateOf(false) }
+
+    if (user == null) {
+        IconButton(onClick = { showLogin = true }) { Icon(Icons.Outlined.AccountCircle, "Log in") }
+    } else {
+        IconButton(onClick = { showMenu = true }) {
+            Icon(Icons.Rounded.AccountCircle, "Account: $user", tint = MaterialTheme.colorScheme.primary)
+            DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                DropdownMenuItem(
+                    text = { Text("Logged in as $user", style = MaterialTheme.typography.labelLarge) },
+                    onClick = {},
+                    enabled = false,
+                )
+                DropdownMenuItem(
+                    text = { Text("Log out") },
+                    leadingIcon = { Icon(Icons.AutoMirrored.Rounded.Logout, null) },
+                    onClick = {
+                        showMenu = false
+                        account.logout()
+                    },
+                )
+            }
+        }
+    }
+    if (showLogin) LoginDialog(onDismiss = { showLogin = false })
+}
+
+/** Logs in to Hacker News. [onLoggedIn] runs after a successful login, before the dialog closes. */
+@Composable
+fun LoginDialog(onDismiss: () -> Unit, onLoggedIn: () -> Unit = {}) {
+    val account = LocalContext.current.account
+    val scope = rememberCoroutineScope()
+    var username by rememberSaveable { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var busy by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    fun submit() {
+        if (busy || username.isBlank() || password.isEmpty()) return
+        busy = true
+        error = null
+        scope.launch {
+            runSuspendCatching { account.login(username, password) }
+                .onSuccess {
+                    onLoggedIn()
+                    onDismiss()
+                }
+                .onFailure { error = it.message ?: "Couldn't log in." }
+            busy = false
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = { if (!busy) onDismiss() },
+        title = { Text("Log in to Hacker News") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = username,
+                    onValueChange = { username = it },
+                    label = { Text("Username") },
+                    singleLine = true,
+                    enabled = !busy,
+                    keyboardOptions = KeyboardOptions(autoCorrectEnabled = false, imeAction = ImeAction.Next),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = { password = it },
+                    label = { Text("Password") },
+                    singleLine = true,
+                    enabled = !busy,
+                    visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { submit() }),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Text(
+                    error ?: "Your password is sent only to news.ycombinator.com and isn't stored.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (error != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = ::submit, enabled = !busy && username.isNotBlank() && password.isNotEmpty()) {
+                if (busy) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp) else Text("Log in")
+            }
+        },
+        dismissButton = { TextButton(onClick = onDismiss, enabled = !busy) { Text("Cancel") } },
+    )
+}

@@ -45,12 +45,15 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -71,7 +74,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.hn2.data.Section
 import app.hn2.data.Story
+import app.hn2.account
 import app.hn2.repository
+import app.hn2.ui.account.LoginDialog
+import app.hn2.ui.account.signedInUser
 import app.hn2.ui.common.ErrorMessage
 import app.hn2.ui.common.Pill
 import app.hn2.util.domainOf
@@ -86,7 +92,7 @@ private const val PAGE_ARTICLE = 1
 @Composable
 fun ItemScreen(itemId: Long, startOnComments: Boolean, onBack: () -> Unit) {
     val context = LocalContext.current
-    val viewModel = viewModel(key = "item-$itemId") { ItemViewModel(context.repository, itemId) }
+    val viewModel = viewModel(key = "item-$itemId") { ItemViewModel(context.repository, context.account, itemId) }
     val state by viewModel.state.collectAsStateWithLifecycle()
     val story = state.story
 
@@ -117,6 +123,14 @@ private fun StoryContent(
     val header = remember { CollapsingHeaderState() }
     val listState = rememberLazyListState()
     var fullscreen by rememberSaveable { mutableStateOf(false) }
+    val snackbar = remember { SnackbarHostState() }
+
+    // Voting and commenting need an HN login; ask for one first, then carry on.
+    val user = signedInUser()
+    var afterLogin by remember { mutableStateOf<(() -> Unit)?>(null) }
+    fun signedIn(action: () -> Unit) {
+        if (user != null) action() else afterLogin = action
+    }
 
     var progress by remember { mutableIntStateOf(0) }
     var canGoBack by remember { mutableStateOf(false) }
@@ -148,6 +162,9 @@ private fun StoryContent(
                         url?.let { openExternally(context, Uri.parse(it)) }
                     },
                     onShare = { share(context, story) },
+                    score = story.score + state.scoreChange,
+                    voted = state.votes[story.id]?.voted == true,
+                    onVote = { signedIn { viewModel.toggleVote(story.id) } },
                     onSelectPage = { page -> scope.launch { pagerState.animateScrollToPage(page) } },
                 )
             }
@@ -170,6 +187,8 @@ private fun StoryContent(
                         listState = listState,
                         onToggle = viewModel::toggleCollapsed,
                         onRetry = viewModel::load,
+                        onVote = { id -> signedIn { viewModel.toggleVote(id) } },
+                        onReply = { comment -> signedIn { viewModel.openComposer(comment) } },
                     )
                     PAGE_ARTICLE -> if (webView != null) ArticlePage(webView, progress)
                 }
@@ -198,6 +217,27 @@ private fun StoryContent(
                 Icon(it, contentDescription = if (onArticle) "Toggle fullscreen" else "Next thread")
             }
         }
+
+        SnackbarHost(
+            snackbar,
+            Modifier
+                .align(Alignment.BottomCenter)
+                .navigationBarsPadding()
+                .padding(bottom = 80.dp),
+        )
+    }
+
+    state.notice?.let { notice ->
+        LaunchedEffect(notice) {
+            viewModel.noticeShown()
+            snackbar.showSnackbar(notice)
+        }
+    }
+    state.composer?.let { composer ->
+        CommentComposerSheet(composer, story.title, onSend = viewModel::post, onDismiss = viewModel::closeComposer)
+    }
+    afterLogin?.let { action ->
+        LoginDialog(onDismiss = { afterLogin = null }, onLoggedIn = action)
     }
 }
 
@@ -210,6 +250,9 @@ private fun Header(
     onBack: () -> Unit,
     onOpenInBrowser: () -> Unit,
     onShare: () -> Unit,
+    score: Int,
+    voted: Boolean,
+    onVote: () -> Unit,
     onSelectPage: (Int) -> Unit,
 ) {
     val colors = MaterialTheme.colorScheme
@@ -245,7 +288,13 @@ private fun Header(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        Pill("${story.score}", icon = Icons.Rounded.ArrowUpward, highlighted = isHotScore(story.score, Section.TOP.hotThreshold))
+                        Pill(
+                            "$score",
+                            icon = Icons.Rounded.ArrowUpward,
+                            highlighted = isHotScore(score, Section.TOP.hotThreshold),
+                            selected = voted,
+                            onClick = onVote,
+                        )
                         Pill(relativeTime(story.time), icon = Icons.Outlined.Schedule)
                         story.by?.let { Pill(it, icon = Icons.Outlined.Person) }
                     }
