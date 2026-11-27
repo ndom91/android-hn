@@ -1,8 +1,8 @@
 <h3><img src="docs/icon.svg" width="48" align="absmiddle" alt="hn2">&nbsp; A fast, modern Hacker News reader for Android</h3>
 
-<a href="https://github.com/ndom91/android-hn/releases/latest/download/hn2-debug.apk"><img src="https://img.shields.io/badge/Download-APK-000000?style=flat&labelColor=000000&color=000000&logo=android&logoColor=white" alt="Download APK"></a>
-<a href="https://github.com/ndom91/android-hn/releases/latest"><img src="https://img.shields.io/github/v/release/ndom91/android-hn?style=flat&labelColor=000000&color=000000&label=Release&logo=github&logoColor=white" alt="Latest release"></a>
-<a href="https://github.com/ndom91/android-hn/actions/workflows/android.yml"><img src="https://img.shields.io/github/actions/workflow/status/ndom91/android-hn/android.yml?branch=main&style=flat&labelColor=000000&color=000000&label=Build&logo=githubactions&logoColor=white" alt="Build status"></a>
+<a href="https://github.com/ndom91/android-hn/releases/latest/download/hn2-debug.apk"><img src="https://img.shields.io/badge/Download-APK-000000?style=for-the-badge&labelColor=000000&color=000000&logo=android&logoColor=white" alt="Download APK"></a>
+<a href="https://github.com/ndom91/android-hn/releases/latest"><img src="https://img.shields.io/github/v/release/ndom91/android-hn?style=for-the-badge&labelColor=000000&color=000000&label=Release&logo=github&logoColor=white" alt="Latest release"></a>
+<a href="https://github.com/ndom91/android-hn/actions/workflows/android.yml"><img src="https://img.shields.io/github/actions/workflow/status/ndom91/android-hn/android.yml?branch=main&style=for-the-badge&labelColor=000000&color=000000&label=Build&logo=githubactions&logoColor=white" alt="Build status"></a>
 
 ---
 
