@@ -7,6 +7,10 @@ import android.webkit.WebView
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,6 +33,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Article
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.outlined.AddComment
 import androidx.compose.material.icons.outlined.Forum
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Person
@@ -45,6 +50,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.PrimaryTabRow
@@ -195,35 +201,51 @@ private fun StoryContent(
             }
         }
 
-        FloatingActionButton(
-            onClick = {
-                if (onArticle) {
-                    fullscreen = !fullscreen
-                } else {
-                    scope.launch { scrollToNextThread(listState, state, story) }
-                }
-            },
-            modifier = Modifier
+        Column(
+            Modifier
                 .align(Alignment.BottomEnd)
                 .navigationBarsPadding()
                 .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            val icon = when {
-                onArticle && fullscreen -> Icons.Rounded.FullscreenExit
-                onArticle -> Icons.Rounded.Fullscreen
-                else -> Icons.Rounded.KeyboardArrowDown
+            // Commenting belongs to the comments; over the article only fullscreen is offered.
+            AnimatedVisibility(visible = !onArticle, enter = scaleIn() + fadeIn(), exit = scaleOut() + fadeOut()) {
+                SmallFloatingActionButton(
+                    onClick = { signedIn { viewModel.openComposer(null) } },
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                ) {
+                    Icon(Icons.Outlined.AddComment, contentDescription = "Add a comment")
+                }
             }
-            AnimatedContent(icon, label = "fab-icon") {
-                Icon(it, contentDescription = if (onArticle) "Toggle fullscreen" else "Next thread")
+            FloatingActionButton(
+                onClick = {
+                    if (onArticle) {
+                        fullscreen = !fullscreen
+                    } else {
+                        scope.launch { scrollToNextThread(listState, state, story) }
+                    }
+                },
+            ) {
+                val icon = when {
+                    onArticle && fullscreen -> Icons.Rounded.FullscreenExit
+                    onArticle -> Icons.Rounded.Fullscreen
+                    else -> Icons.Rounded.KeyboardArrowDown
+                }
+                AnimatedContent(icon, label = "fab-icon") {
+                    Icon(it, contentDescription = if (onArticle) "Toggle fullscreen" else "Next thread")
+                }
             }
         }
 
+        // Beside the buttons, not over them: they're 56dp wide plus a 16dp margin.
         SnackbarHost(
             snackbar,
             Modifier
-                .align(Alignment.BottomCenter)
+                .align(Alignment.BottomStart)
                 .navigationBarsPadding()
-                .padding(bottom = 80.dp),
+                .padding(end = 72.dp),
         )
     }
 

@@ -2,7 +2,6 @@ package app.hn2.ui.item
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,7 +21,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.AddComment
 import androidx.compose.material.icons.rounded.ArrowUpward
 import androidx.compose.material.icons.rounded.UnfoldMore
 import androidx.compose.material3.CircularProgressIndicator
@@ -79,8 +77,7 @@ fun CommentsPage(
     onToggle: (Long) -> Unit,
     onRetry: () -> Unit,
     onVote: (Long) -> Unit,
-    /** Opens the comment box: a reply to the given comment, or a comment on the story for null. */
-    onReply: (Comment?) -> Unit,
+    onReply: (Comment) -> Unit,
 ) {
     val comments = state.comments
     var actionsFor by remember { mutableStateOf<Comment?>(null) }
@@ -102,7 +99,6 @@ fun CommentsPage(
                 )
             }
         }
-        if (comments != null) item(key = "add-comment") { AddCommentRow { onReply(null) } }
         when {
             state.commentsError != null -> item(key = "error") {
                 ErrorMessage(state.commentsError, onRetry, Modifier.height(240.dp))
@@ -145,30 +141,6 @@ fun CommentsPage(
     }
 }
 
-/** A prompt at the top of the thread that opens the comment box. */
-@Composable
-private fun AddCommentRow(onClick: () -> Unit) {
-    val colors = MaterialTheme.colorScheme
-    Row(
-        Modifier
-            .padding(bottom = 12.dp)
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(CardRadius))
-            .background(colors.surfaceContainer)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 20.dp, vertical = 16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(Icons.Outlined.AddComment, null, Modifier.size(20.dp), tint = colors.primary)
-        Spacer(Modifier.width(12.dp))
-        Text("Add a comment…", style = MaterialTheme.typography.bodyLarge, color = colors.onSurfaceVariant)
-    }
-}
-
-/**
- * One comment. Each top-level thread is drawn as one rounded card whose rows share its
- * background; replies hang off thread lines that run down from their parent's avatar.
- */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun CommentItem(
@@ -362,8 +334,8 @@ private val Story.hasText: Boolean get() = !text.isNullOrBlank()
 
 /** Scrolls to the next top-level comment below the one at the top of the screen. */
 suspend fun scrollToNextThread(listState: LazyListState, state: ItemUiState, story: Story) {
-    // Rows come after the story's own text, when it has some, and the "Add a comment" row.
-    val offset = (if (story.hasText) 1 else 0) + 1
+    // The story's own text, when it has some, is the list's first item.
+    val offset = if (story.hasText) 1 else 0
     val current = listState.firstVisibleItemIndex - offset
     val next = state.rows.withIndex().firstOrNull { (index, row) -> index > current && row.depth == 0 }
     if (next != null) listState.animateScrollToItem(next.index + offset)

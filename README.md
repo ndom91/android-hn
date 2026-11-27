@@ -47,7 +47,7 @@ same way and it updates in place.
   collapse it, or use the arrow button to jump to the next thread.
 - **Vote and comment.** Log in with your HN account from the account button on the story list.
   Tap a story's score to upvote it, long-press a comment to upvote or reply to it, or use
-  "Add a comment" at the top of a thread.
+  the comment button above the next-thread button.
 - **Material You.** The app picks up your wallpaper colors and follows light and dark mode.
 - **HN links open in the app.** `news.ycombinator.com/item?id=…` links can open straight in hn2.
 
