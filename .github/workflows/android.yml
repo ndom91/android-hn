@@ -84,7 +84,7 @@ jobs:
           gh release create "v$VERSION" hn2-debug.apk \
             --latest \
             --target "$GITHUB_SHA" \
-            --title "hn2 $VERSION" \
+            --title "v$VERSION" \
             --notes "Built from ${GITHUB_SHA::7}. Download **hn2-debug.apk** below on your Android phone and open it to install, or to update an existing install."
 
       # Keep the version in the repo in step with the newest release. If main has
