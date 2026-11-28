@@ -26,13 +26,25 @@ suspend fun articleText(story: Story, webView: WebView?): String? {
 
 private suspend fun readability(webView: WebView): String? {
     val library = webView.context.assets.open("readability.js").bufferedReader().use { it.readText() }
-    // Readability changes the document it parses, so it gets a copy of the page.
+    // Readability changes the document it parses, so it gets a copy of the page. Its textContent
+    // often runs paragraphs together, so the text is taken block by block, one line per paragraph,
+    // heading or list item. Blocks inside other blocks are skipped so nothing is read twice.
     val script = """
         $library
         ;(function() {
           try {
             var article = new Readability(document.cloneNode(true)).parse();
-            return article ? article.textContent : null;
+            if (!article) return null;
+            var root = document.createElement('div');
+            root.innerHTML = article.content;
+            var blocks = 'p,h1,h2,h3,h4,h5,h6,li,blockquote,pre,figcaption,dt,dd';
+            var lines = Array.prototype.filter
+              .call(root.querySelectorAll(blocks), function (el) { return !el.querySelector(blocks); })
+              .map(function (el) { return el.textContent.replace(/\s+/g, ' ').trim(); })
+              .filter(function (line) { return line.length > 0; });
+            var text = lines.join('\n');
+            // Pages that keep their text outside those elements: fall back to all of it.
+            return text.length >= article.textContent.trim().length / 2 ? text : article.textContent;
           } catch (e) { return null; }
         })();
     """.trimIndent()

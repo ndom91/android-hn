@@ -19,10 +19,30 @@ class SentencesTest {
     }
 
     @Test
-    fun `splits an overlong sentence between words`() {
-        val chunks = speechChunks("aaaa bbbb cccc dddd", maxChars = 9, locale = Locale.US)
-        assertEquals(listOf("aaaa bbbb", "cccc dddd"), chunks)
-        assertTrue(chunks.all { it.length <= 9 })
+    fun `never cuts a sentence, even one longer than the limit`() {
+        val long = "This opening sentence is a good deal longer than sixty characters, as most are."
+        val chunks = speechChunks("$long Short one.", maxChars = 300, firstMaxChars = 60, locale = Locale.US)
+        assertEquals(listOf(long, "Short one."), chunks)
+    }
+
+    @Test
+    fun `every chunk ends at a sentence end`() {
+        val text = (1..30).joinToString(" ") { "Sentence $it has, of course, a few more words than needed." }
+        assertTrue(speechChunks(text, locale = Locale.US).all { it.endsWith(".") })
+    }
+
+    @Test
+    fun `abbreviations and initials don't end a sentence`() {
+        assertEquals(
+            listOf("Mr. Smith met J. R. R. Tolkien, e.g. at the U.S. office.", "Then he left."),
+            sentences("Mr. Smith met J. R. R. Tolkien, e.g. at the U.S. office. Then he left.", Locale.US),
+        )
+    }
+
+    @Test
+    fun `splits a run-on past the hard limit at a comma`() {
+        val chunks = speechChunks("alpha beta, gamma delta, epsilon zeta", maxChars = 20, firstMaxChars = 20, hardMaxChars = 25, locale = Locale.US)
+        assertEquals(listOf("alpha beta, gamma delta,", "epsilon zeta"), chunks)
     }
 
     @Test
