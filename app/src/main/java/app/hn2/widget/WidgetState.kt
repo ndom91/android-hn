@@ -61,7 +61,7 @@ enum class WidgetTheme(
 ) {
     DARK("Dark", Color(0xF22A2D30), Color(0xFFF2F2F2), Color(0xFFA0A4A8)),
     // Lighter secondary than Dark: grey loses contrast fast on a see-through background.
-    TRANSPARENT("Transparent", Color(0x66000000), Color(0xFFFFFFFF), Color(0xFFE6E6E6), metaShadow = true),
+    TRANSPARENT("Transparent", Color(0x66000000), Color(0xFFFFFFFF), Color(0xFFF0F0F0), metaShadow = true),
     LIGHT("Light", Color(0xF2FFFFFF), Color(0xFF1A1A1A), Color(0xFF666666));
 
     companion object {
