@@ -40,6 +40,7 @@ import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import app.hn2.listen
+import app.hn2.ui.item.ItemActivity
 
 private val SPEEDS = listOf(1f, 1.25f, 1.5f, 2f)
 
@@ -47,9 +48,15 @@ private val SPEEDS = listOf(1f, 1.25f, 1.5f, 2f)
  * A slim player bar for the story being read aloud. It shows nothing when nothing is playing.
  * Connecting to the playback service also starts it, so this is what kicks off reading.
  * [contentModifier] pads the bar's contents, e.g. to keep them above the navigation bar.
+ * Tapping the bar calls [onOpenStory] with the story being read; by default it opens its article.
  */
 @Composable
-fun MiniPlayer(modifier: Modifier = Modifier, contentModifier: Modifier = Modifier) {
+fun MiniPlayer(
+    modifier: Modifier = Modifier,
+    contentModifier: Modifier = Modifier,
+    onOpenStory: ((Long) -> Unit)? = null,
+) {
+    val context = LocalContext.current
     val listen = LocalContext.current.listen
     val request by listen.request.collectAsStateWithLifecycle()
     val error by listen.error.collectAsStateWithLifecycle()
@@ -57,7 +64,12 @@ fun MiniPlayer(modifier: Modifier = Modifier, contentModifier: Modifier = Modifi
         val current = request ?: return@AnimatedVisibility
         val controller = rememberMediaController()
         val state = rememberPlayerState(controller)
-        Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+        Surface(
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            onClick = {
+                onOpenStory?.invoke(current.storyId) ?: context.startActivity(ItemActivity.intent(context, current.storyId))
+            },
+        ) {
             Column(contentModifier) {
                 LinearProgressIndicator(
                     progress = { (state.index + 1).toFloat() / current.chunks.size },

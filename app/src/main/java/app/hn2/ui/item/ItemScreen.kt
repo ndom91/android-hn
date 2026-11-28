@@ -282,7 +282,14 @@ private fun StoryContent(
                     .padding(end = 72.dp),
             )
         }
-        MiniPlayer()
+        MiniPlayer(onOpenStory = { id ->
+            // Already on this story: just show the article instead of opening it again.
+            if (id == story.id) {
+                scope.launch { pagerState.animateScrollToPage(if (articleUrl != null) PAGE_ARTICLE else PAGE_COMMENTS) }
+            } else {
+                context.startActivity(ItemActivity.intent(context, id))
+            }
+        })
         Spacer(Modifier.navigationBarsPadding())
     }
 
