@@ -2,7 +2,6 @@ package app.hn2.ui.item
 
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.webkit.WebView
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
@@ -42,10 +41,11 @@ import androidx.compose.material.icons.rounded.ArrowUpward
 import androidx.compose.material.icons.rounded.Fullscreen
 import androidx.compose.material.icons.rounded.FullscreenExit
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
-import androidx.compose.material.icons.rounded.OpenInBrowser
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
@@ -97,6 +97,7 @@ import app.hn2.util.domainOf
 import app.hn2.util.hnItemUrl
 import app.hn2.util.isHotScore
 import app.hn2.util.relativeTime
+import app.hn2.util.samePage
 import kotlinx.coroutines.launch
 
 private const val PAGE_COMMENTS = 0
@@ -147,12 +148,16 @@ private fun StoryContent(
 
     var progress by remember { mutableIntStateOf(0) }
     var canGoBack by remember { mutableStateOf(false) }
+    var pageUrl by remember { mutableStateOf(articleUrl) }
     val webView = remember(articleUrl) {
         articleUrl?.let { url ->
             createArticleWebView(
                 context,
                 onProgress = { progress = it },
-                onNavigation = { canGoBack = it.canGoBack() },
+                onNavigation = {
+                    canGoBack = it.canGoBack()
+                    pageUrl = it.url
+                },
             ).apply { loadUrl(url) }
         }
     }
@@ -170,11 +175,7 @@ private fun StoryContent(
                     header = header,
                     pagerState = pagerState,
                     onBack = onBack,
-                    onOpenInBrowser = {
-                        val url = if (onArticle) webView?.url ?: articleUrl else hnItemUrl(story.id)
-                        url?.let { openExternally(context, Uri.parse(it)) }
-                    },
-                    onShare = { share(context, story) },
+                    shareOptions = shareOptions(story, pageUrl, webView),
                     score = story.score + state.scoreChange,
                     voted = state.votes[story.id]?.voted == true,
                     onVote = { signedIn { viewModel.toggleVote(story.id) } },
@@ -279,8 +280,7 @@ private fun Header(
     header: CollapsingHeaderState,
     pagerState: PagerState,
     onBack: () -> Unit,
-    onOpenInBrowser: () -> Unit,
-    onShare: () -> Unit,
+    shareOptions: List<ShareOption>,
     score: Int,
     voted: Boolean,
     onVote: () -> Unit,
@@ -301,8 +301,7 @@ private fun Header(
                         .weight(1f)
                         .alpha(header.collapsedFraction),
                 )
-                IconButton(onClick = onOpenInBrowser) { Icon(Icons.Rounded.OpenInBrowser, "Open in browser") }
-                IconButton(onClick = onShare) { Icon(Icons.Rounded.Share, "Share") }
+                ShareButton(shareOptions)
             }
             with(header) {
                 Column(
@@ -396,8 +395,45 @@ private fun ArticlePage(webView: WebView, progress: Int) {
     }
 }
 
-private fun share(context: Context, story: Story) {
-    val text = listOfNotNull(story.title, story.url ?: hnItemUrl(story.id)).joinToString("\n")
+/** One link the Share menu offers. [title] is read when it's shared, since a page's title loads late. */
+private class ShareOption(val label: String, val url: String, val title: () -> String?)
+
+/**
+ * The story's article and its HN discussion, plus the page the article view is on once it has
+ * moved somewhere else. Opening a link in a browser goes through the share sheet too.
+ */
+private fun shareOptions(story: Story, pageUrl: String?, webView: WebView?): List<ShareOption> = buildList {
+    val articleUrl = story.url
+    if (pageUrl != null && articleUrl != null && !samePage(pageUrl, articleUrl)) {
+        add(ShareOption("This page", pageUrl) { webView?.title?.takeIf { it.isNotBlank() } })
+    }
+    if (articleUrl != null) add(ShareOption("Original article", articleUrl) { story.title })
+    add(ShareOption("HN discussion", hnItemUrl(story.id)) { story.title })
+}
+
+/** Shares straight away when there's only one link (text posts), and otherwise asks which. */
+@Composable
+private fun ShareButton(options: List<ShareOption>) {
+    val context = LocalContext.current
+    var showMenu by remember { mutableStateOf(false) }
+    IconButton(onClick = { if (options.size == 1) share(context, options.single()) else showMenu = true }) {
+        Icon(Icons.Rounded.Share, "Share")
+        DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+            options.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(option.label) },
+                    onClick = {
+                        showMenu = false
+                        share(context, option)
+                    },
+                )
+            }
+        }
+    }
+}
+
+private fun share(context: Context, option: ShareOption) {
+    val text = listOfNotNull(option.title(), option.url).joinToString("\n")
     val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text)
     context.startActivity(Intent.createChooser(send, null))
 }

@@ -27,3 +27,15 @@ fun domainOf(url: String?): String? {
 }
 
 fun hnItemUrl(id: Long) = "https://news.ycombinator.com/item?id=$id"
+
+/**
+ * True if [a] and [b] are the same page once the scheme, "www.", a trailing slash and the #fragment
+ * are ignored, which sites change freely when they redirect.
+ */
+fun samePage(a: String, b: String): Boolean {
+    fun normal(url: String) = url.substringBefore('#')
+        .replaceFirst(Regex("^https?://(www\\.)?", RegexOption.IGNORE_CASE), "")
+        .trimEnd('/')
+        .lowercase()
+    return normal(a) == normal(b)
+}

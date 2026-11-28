@@ -33,4 +33,11 @@ class FormatTest {
         assertTrue(isHotComments(205, 100))
         assertFalse(isHotComments(95, 100))
     }
+
+    @Test
+    fun `samePage ignores scheme, www, trailing slash and fragment`() {
+        assertTrue(samePage("http://example.com/post", "https://www.example.com/post/#top"))
+        assertFalse(samePage("https://example.com/post", "https://example.com/other"))
+        assertFalse(samePage("https://example.com/post?id=1", "https://example.com/post?id=2"))
+    }
 }
