@@ -7,6 +7,8 @@ import com.k2fsa.sherpa.onnx.OfflineTtsConfig
 import com.k2fsa.sherpa.onnx.OfflineTtsKokoroModelConfig
 import com.k2fsa.sherpa.onnx.OfflineTtsModelConfig
 import com.k2fsa.sherpa.onnx.OfflineTtsVitsModelConfig
+import app.hn2.util.softenKokoro
+import app.hn2.util.writeWav
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -17,13 +19,17 @@ class SherpaSpeechEngine private constructor(
     private val tts: OfflineTts,
     private val speakerId: Int,
     override val voiceKey: String,
+    /** Kokoro only: Piper has almost nothing above 8 kHz and peaks too high to boost. */
+    private val soften: Boolean = false,
 ) : SpeechEngine {
 
     override suspend fun synthesize(text: String, out: File) = withContext(Dispatchers.Default) {
         val audio = tts.generate(text, speakerId, 1f)
         val partial = File(out.path + ".tmp")
         try {
-            if (audio.samples.isEmpty() || !audio.save(partial.path)) throw IOException("Couldn't generate speech")
+            if (audio.samples.isEmpty()) throw IOException("Couldn't generate speech")
+            val samples = if (soften) softenKokoro(audio.samples, audio.sampleRate) else audio.samples
+            writeWav(partial, samples, audio.sampleRate)
             if (!partial.renameTo(out)) throw IOException("Couldn't save speech")
         } finally {
             partial.delete()
@@ -93,7 +99,7 @@ class SherpaSpeechEngine private constructor(
                     numThreads = threads(),
                 ),
             )
-            return SherpaSpeechEngine(OfflineTts(config = config), speaker, "kokoro:$speaker")
+            return SherpaSpeechEngine(OfflineTts(config = config), speaker, "kokoro-soft:$speaker", soften = true)
         }
 
         // af_heart, Kokoro's best-rated English voice.
