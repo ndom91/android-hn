@@ -19,6 +19,19 @@ android {
         versionCode = System.getenv("VERSION_CODE")?.toIntOrNull() ?: 1
         // The latest released version. CI bumps the patch for each release; raise it here for a new minor.
         versionName = "0.1.32"
+
+        // sherpa-onnx's native voices are only shipped for 64-bit ARM: every recent phone, and
+        // emulators on Apple Silicon. Other ABIs would add about 30 MB each.
+        ndk { abiFilters += "arm64-v8a" }
+    }
+
+    packaging {
+        jniLibs {
+            // Only the JNI library and ONNX Runtime are loaded; the C and C++ APIs are for native callers.
+            excludes += setOf("**/libsherpa-onnx-c-api.so", "**/libsherpa-onnx-cxx-api.so")
+            // Compress the native libraries in the APK: a much smaller download, unpacked on install.
+            useLegacyPackaging = true
+        }
     }
 
     signingConfigs {
@@ -69,6 +82,9 @@ dependencies {
 
     implementation(libs.media3.exoplayer)
     implementation(libs.media3.session)
+    // Fetched by scripts/fetch-sherpa.sh, not kept in git.
+    implementation(files("libs/sherpa-onnx-1.13.8.aar"))
+    implementation(libs.commons.compress)
 
     implementation(libs.okhttp)
     implementation(libs.kotlinx.serialization.json)

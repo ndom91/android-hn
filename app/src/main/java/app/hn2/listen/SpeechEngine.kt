@@ -23,8 +23,10 @@ data class VoiceOption(val id: String, val label: String)
 
 suspend fun createSpeechEngine(context: Context, settings: VoiceSettings): SpeechEngine = when (settings.engine) {
     VoiceEngine.SYSTEM -> SystemSpeechEngine.create(context, settings.voice)
+    VoiceEngine.PIPER, VoiceEngine.KOKORO -> SherpaSpeechEngine.create(context, settings.engine, settings.voice)
 }
 
 suspend fun voiceOptions(context: Context, engine: VoiceEngine): List<VoiceOption> = when (engine) {
     VoiceEngine.SYSTEM -> SystemSpeechEngine.voices(context)
+    VoiceEngine.PIPER, VoiceEngine.KOKORO -> SherpaSpeechEngine.voices(context, engine)
 }

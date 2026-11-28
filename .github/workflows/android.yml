@@ -52,6 +52,9 @@ jobs:
           sed -i -E "s/versionName = \"[^\"]*\"/versionName = \"$next\"/" app/build.gradle.kts
           grep -q "versionName = \"$next\"" app/build.gradle.kts
 
+      - name: Fetch sherpa-onnx
+        run: ./scripts/fetch-sherpa.sh
+
       # Each build ships the current EasyList. If easylist.to is down, the committed copy is used.
       - name: Refresh ad hosts
         run: ./scripts/update-adhosts.sh || echo "::warning::EasyList fetch failed; using the committed ad host list"

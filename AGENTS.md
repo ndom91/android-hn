@@ -22,6 +22,7 @@ You need JDK 17 and the Android SDK with platform 37.1 (AGP downloads it if it's
 `local.properties` (gitignored) or `ANDROID_HOME`.
 
 ```sh
+./scripts/fetch-sherpa.sh        # once: downloads the sherpa-onnx library into app/libs/ (not in git)
 ./gradlew assembleDebug          # app/build/outputs/apk/debug/app-debug.apk
 ./gradlew testDebugUnitTest      # unit tests
 adb install -r app/build/outputs/apk/debug/app-debug.apk
@@ -108,6 +109,12 @@ row flattening, HTML parsing, formatting) out of composables so it stays testabl
   playback and plays them with ExoPlayer, so background play, the notification and skipping work the
   same for every `SpeechEngine`. WAVs live in `cacheDir/listen`, named by a hash of voice and text so
   replays reuse them; the app deletes ones unused for 3 days at startup (`AudioCache`).
+- **Piper and Kokoro run on the phone through sherpa-onnx**, pinned to **1.13.8**: 2.0 removed
+  espeak-ng, which the published Piper voices still need. `scripts/fetch-sherpa.sh` downloads its AAR
+  into the gitignored `app/libs/` (CI runs it before building). Only `arm64-v8a` is packaged, with the
+  C/C++ API libraries left out and native libraries compressed, which keeps the APK about 12 MB larger
+  instead of 70. Voices (`VoiceModel`) are downloaded from sherpa-onnx's `tts-models` release by
+  `VoiceDownloadWorker` into `files/voices/`; a `.installed` file marks a finished unpack.
 - **Use `runSuspendCatching`, not `runCatching`, in coroutines.** Plain `runCatching` reports a
   cancelled job as an error.
 - **`ItemActivity` handles its own configuration changes** so rotating doesn't reload the article.

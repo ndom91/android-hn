@@ -7,7 +7,9 @@ import kotlinx.coroutines.flow.asStateFlow
 
 /** Which text-to-speech engine reads articles aloud. */
 enum class VoiceEngine(val label: String) {
-    SYSTEM("System");
+    SYSTEM("System"),
+    PIPER("Piper (medium)"),
+    KOKORO("Kokoro (large)");
 
     companion object {
         fun fromName(name: String?): VoiceEngine = entries.firstOrNull { it.name == name } ?: SYSTEM

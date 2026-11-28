@@ -3,6 +3,15 @@ package app.hn2.ui.settings
 import android.content.Context
 import android.media.MediaPlayer
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.DeleteOutline
+import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.work.WorkInfo
+import androidx.work.WorkManager
+import app.hn2.listen.VoiceDownloadWorker
+import app.hn2.listen.VoiceModel
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -62,7 +71,11 @@ fun VoiceSettingsScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val settings = context.settings
     val voice by settings.voice.collectAsStateWithLifecycle()
-    val options = rememberVoiceOptions(voice.engine)
+    var deletions by remember { mutableIntStateOf(0) }
+    val downloads = VoiceModel.entries.associateWith { rememberDownloadState(it, deletions) }
+    // Reload the voice list whenever a download finishes or is deleted.
+    val installed = downloads.filterValues { it == DownloadState.Installed }.keys
+    val options = rememberVoiceOptions(voice.engine, installed)
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surface,
@@ -97,8 +110,26 @@ fun VoiceSettingsScreen(onBack: () -> Unit) {
                 )
             }
 
+            val models = VoiceModel.entries.filter { it.engine == voice.engine }
+            if (models.isNotEmpty()) {
+                SectionLabel("Downloads")
+                models.forEach { model ->
+                    DownloadRow(model, downloads.getValue(model), onDelete = {
+                        model.delete(context)
+                        deletions++
+                    })
+                }
+            }
+
             SectionLabel("Voice")
             Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (models.isNotEmpty() && options?.isEmpty() == true) {
+                    Text(
+                        "Download a voice above to use ${voice.engine.label}.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
                 VoicePicker(
                     options = options,
                     selected = voice.voice,
@@ -113,7 +144,71 @@ fun VoiceSettingsScreen(onBack: () -> Unit) {
 private val VoiceEngine.description: String
     get() = when (this) {
         VoiceEngine.SYSTEM -> "Your phone's text-to-speech voices. Nothing to download."
+        VoiceEngine.PIPER -> "Natural voices that run on your phone, about 21 MB each. Quick on most phones."
+        VoiceEngine.KOKORO -> "The most natural voices. A 132 MB download, and slower on older phones."
     }
+
+private sealed interface DownloadState {
+    data object NotDownloaded : DownloadState
+    data class Downloading(val progress: Float) : DownloadState
+    data class Failed(val message: String) : DownloadState
+    data object Installed : DownloadState
+}
+
+/** Follows [model]'s download in WorkManager. [deletions] changes after a delete, to re-check the files. */
+@Composable
+private fun rememberDownloadState(model: VoiceModel, deletions: Int): DownloadState {
+    val context = LocalContext.current
+    val work = remember(model) {
+        WorkManager.getInstance(context).getWorkInfosForUniqueWorkFlow(VoiceDownloadWorker.workName(model))
+    }
+    val infos by work.collectAsStateWithLifecycle(initialValue = emptyList())
+    val info = infos.lastOrNull()
+    return remember(info, deletions) {
+        when {
+            info?.state == WorkInfo.State.RUNNING || info?.state == WorkInfo.State.ENQUEUED ->
+                DownloadState.Downloading(info.progress.getFloat(VoiceDownloadWorker.KEY_PROGRESS, 0f))
+            model.isInstalled(context) -> DownloadState.Installed
+            info?.state == WorkInfo.State.FAILED ->
+                DownloadState.Failed(info.outputData.getString(VoiceDownloadWorker.KEY_ERROR) ?: "Download failed")
+            else -> DownloadState.NotDownloaded
+        }
+    }
+}
+
+@Composable
+private fun DownloadRow(model: VoiceModel, state: DownloadState, onDelete: () -> Unit) {
+    val context = LocalContext.current
+    ListItem(
+        headlineContent = { Text(model.label) },
+        supportingContent = {
+            when (state) {
+                DownloadState.NotDownloaded -> Text("${model.sizeMb} MB")
+                is DownloadState.Downloading -> Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("Downloading… ${(state.progress * 100).toInt()}%")
+                    LinearProgressIndicator(progress = { state.progress }, modifier = Modifier.fillMaxWidth())
+                }
+                is DownloadState.Failed -> Text(state.message, color = MaterialTheme.colorScheme.error)
+                DownloadState.Installed -> Text("Downloaded · ${model.sizeMb} MB")
+            }
+        },
+        trailingContent = {
+            when (state) {
+                DownloadState.NotDownloaded, is DownloadState.Failed ->
+                    IconButton(onClick = { VoiceDownloadWorker.start(context, model) }) {
+                        Icon(Icons.Rounded.Download, "Download ${model.label}")
+                    }
+                is DownloadState.Downloading ->
+                    IconButton(onClick = { VoiceDownloadWorker.cancel(context, model) }) {
+                        Icon(Icons.Rounded.Close, "Cancel download")
+                    }
+                DownloadState.Installed ->
+                    IconButton(onClick = onDelete) { Icon(Icons.Rounded.DeleteOutline, "Delete ${model.label}") }
+            }
+        },
+        colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surface),
+    )
+}
 
 @Composable
 private fun SectionLabel(text: String) {
@@ -125,11 +220,11 @@ private fun SectionLabel(text: String) {
     )
 }
 
-/** The engine's voices, or null while they load. */
+/** The engine's voices, or null while they load. They're reloaded when [key] changes. */
 @Composable
-fun rememberVoiceOptions(engine: VoiceEngine): List<VoiceOption>? {
+fun rememberVoiceOptions(engine: VoiceEngine, key: Any? = null): List<VoiceOption>? {
     val context = LocalContext.current
-    val options by produceState<List<VoiceOption>?>(null, engine) {
+    val options by produceState<List<VoiceOption>?>(null, engine, key) {
         value = runSuspendCatching { voiceOptions(context, engine) }.getOrDefault(emptyList())
     }
     return options

@@ -22,6 +22,9 @@ class Hn2App : Application() {
         private set
     lateinit var settings: AppSettings
         private set
+    /** The shared HTTP client. Use `newBuilder().cache(null)` for big downloads, which would flush the cache. */
+    lateinit var http: OkHttpClient
+        private set
     val listen = ListenSession()
 
     // Loaded on first use, which is on the WebView's request thread, not the main thread.
@@ -38,6 +41,7 @@ class Hn2App : Application() {
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
             .build()
+        http = client
         repository = HnRepository(HnApi(client))
         account = HnAccount(client, getSharedPreferences("account", MODE_PRIVATE))
         settings = AppSettings(getSharedPreferences("settings", MODE_PRIVATE))
@@ -60,3 +64,6 @@ val android.content.Context.settings: AppSettings
 
 val android.content.Context.listen: ListenSession
     get() = (applicationContext as Hn2App).listen
+
+val android.content.Context.http: OkHttpClient
+    get() = (applicationContext as Hn2App).http
