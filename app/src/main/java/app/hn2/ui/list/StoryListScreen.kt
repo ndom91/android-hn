@@ -14,8 +14,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.rounded.ArrowUpward
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -37,7 +40,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import app.hn2.data.Section
 import app.hn2.data.Story
 import app.hn2.repository
-import app.hn2.ui.account.AccountButton
+import app.hn2.ui.settings.SettingsActivity
 import app.hn2.ui.common.ErrorMessage
 import app.hn2.ui.common.Pill
 import app.hn2.ui.common.groupedShape
@@ -66,7 +69,11 @@ fun StoryListScreen(initialSection: Section) {
                 // A plain top bar with a large title: LargeTopAppBar keeps an empty toolbar row above it.
                 TopAppBar(
                     title = { Text(state.section.title, style = MaterialTheme.typography.headlineMedium) },
-                    actions = { AccountButton() },
+                    actions = {
+                        IconButton(onClick = { context.startActivity(SettingsActivity.intent(context)) }) {
+                            Icon(Icons.Rounded.Settings, "Settings")
+                        }
+                    },
                     scrollBehavior = scrollBehavior,
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.surface,

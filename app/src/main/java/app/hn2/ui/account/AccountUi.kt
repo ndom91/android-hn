@@ -6,16 +6,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.Logout
-import androidx.compose.material.icons.outlined.AccountCircle
-import androidx.compose.material.icons.rounded.AccountCircle
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -44,39 +36,6 @@ fun signedInUser(): String? {
     val account = LocalContext.current.account
     val user by account.user.collectAsStateWithLifecycle()
     return user
-}
-
-/** Top-bar button: log in, or show who you're logged in as with a way to log out. */
-@Composable
-fun AccountButton() {
-    val account = LocalContext.current.account
-    val user = signedInUser()
-    var showLogin by remember { mutableStateOf(false) }
-    var showMenu by remember { mutableStateOf(false) }
-
-    if (user == null) {
-        IconButton(onClick = { showLogin = true }) { Icon(Icons.Outlined.AccountCircle, "Log in") }
-    } else {
-        IconButton(onClick = { showMenu = true }) {
-            Icon(Icons.Rounded.AccountCircle, "Account: $user", tint = MaterialTheme.colorScheme.primary)
-            DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
-                DropdownMenuItem(
-                    text = { Text("Logged in as $user", style = MaterialTheme.typography.labelLarge) },
-                    onClick = {},
-                    enabled = false,
-                )
-                DropdownMenuItem(
-                    text = { Text("Log out") },
-                    leadingIcon = { Icon(Icons.AutoMirrored.Rounded.Logout, null) },
-                    onClick = {
-                        showMenu = false
-                        account.logout()
-                    },
-                )
-            }
-        }
-    }
-    if (showLogin) LoginDialog(onDismiss = { showLogin = false })
 }
 
 /** Logs in to Hacker News. [onLoggedIn] runs after a successful login, before the dialog closes. */

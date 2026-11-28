@@ -35,7 +35,8 @@ All code is in the single `:app` module, under `app/src/main/java/app/hn2/`:
 |---|---|
 | `Hn2App.kt` | Application class. Builds the shared OkHttp client, `HnRepository` and `HnAccount`; `Context.repository` and `Context.account` get them. |
 | `data/` | `HnApi` (Firebase + Algolia), `HnRepository` (fetching, in-memory story cache, comment tree), `HnAccount` (login, votes, comments), the cancellable `fetch` helper, models and `Section`. |
-| `ui/account/` | The login dialog and the account button in the story list's top bar. |
+| `ui/account/` | The login dialog and `signedInUser`. |
+| `ui/settings/` | `SettingsActivity`, opened by the gear in the story list's top bar: who's signed in, settings rows and Log out. |
 | `ui/list/` | `MainActivity` and the story list screen with section chips. |
 | `ui/item/` | `ItemActivity`: the story screen with its collapsing header, the Comments/Article pager, the article WebView, the comments list, the long-press comment actions and the comment box. |
 | `ui/common/`, `ui/theme/` | Shared composables (`Pill`, `ErrorMessage`, `groupedShape`) and the Material You theme. |
