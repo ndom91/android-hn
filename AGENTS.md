@@ -83,6 +83,8 @@ row flattening, HTML parsing, formatting) out of composables so it stays testabl
   included), and that font has no bold, so Glance's `FontWeight.Bold` and `textStyle="bold"`
   did nothing. Titles are bolded with the `FAKE_BOLD_TEXT_FLAG` paint flag instead (`storyText`).
   The meta layout still asks for JetBrains Mono, which applies on phones that allow it.
+  The Transparent theme uses `_shadow` copies of both layouts, because a widget can't set a text
+  shadow from code; change each pair together, and the preview's matching `Shadow`.
 - **Widget taps and `ItemActivity` share an extra name.** The widget passes the story ID as an
   action parameter whose key is `ItemActivity.EXTRA_ITEM_ID`. Change both together.
 - **Never put the article WebView inside another scroll container.** It is `match_parent` and

@@ -180,11 +180,26 @@ private fun StoryItem(
         Column(GlanceModifier.defaultWeight()) {
             val context = LocalContext.current
             AndroidRemoteViews(
-                storyText(context, R.layout.widget_story_title, R.id.title, story.title, theme.text, sizes.title, bold = true),
+                storyText(
+                    context,
+                    if (theme.textShadow) R.layout.widget_story_title_shadow else R.layout.widget_story_title,
+                    R.id.title,
+                    story.title,
+                    theme.text,
+                    sizes.title,
+                    bold = true,
+                ),
                 GlanceModifier.fillMaxWidth(),
             )
             AndroidRemoteViews(
-                storyText(context, R.layout.widget_story_meta, R.id.meta, story.meta(), theme.secondary, sizes.meta),
+                storyText(
+                    context,
+                    if (theme.textShadow) R.layout.widget_story_meta_shadow else R.layout.widget_story_meta,
+                    R.id.meta,
+                    story.meta(),
+                    theme.secondary,
+                    sizes.meta,
+                ),
                 GlanceModifier.fillMaxWidth().padding(top = 2.dp),
             )
         }

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- widget_story_meta.xml for the Transparent theme, with the same shadow as widget_story_title_shadow.xml. -->
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/meta"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:ellipsize="end"
+    android:fontFamily="@font/jetbrains_mono_regular"
+    android:maxLines="1"
+    android:shadowColor="#B3000000"
+    android:shadowDy="1"
+    android:shadowRadius="4" />

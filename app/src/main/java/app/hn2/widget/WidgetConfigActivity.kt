@@ -51,8 +51,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
@@ -297,8 +299,12 @@ private fun WidgetPreview(settings: WidgetSettings, stories: List<WidgetStory>) 
     val rankColor = if (settings.orangeRanks) HnOrange else theme.text
     // JetBrains Mono for [mono] text, as the widget's images and meta line use; titles are the
     // phone's font in bold, like the widget's.
-    fun style(size: Int, color: Color, mono: Boolean = false, bold: Boolean = false) = TextStyle(
+    // Matches the shadow in widget_story_title_shadow.xml (pixels, like the layout's).
+    val storyShadow = if (theme.textShadow) Shadow(Color(0xB3000000), Offset(0f, 1f), 4f) else null
+
+    fun style(size: Int, color: Color, mono: Boolean = false, bold: Boolean = false, shadow: Shadow? = null) = TextStyle(
         color = color,
+        shadow = shadow,
         fontSize = size.sp,
         lineHeight = (size * 1.3f).sp,
         fontFamily = if (mono) JetBrainsMono else null,
@@ -345,10 +351,10 @@ private fun WidgetPreview(settings: WidgetSettings, stories: List<WidgetStory>) 
                         modifier = Modifier.width((sizes.rank * 1.2f + 10).dp),
                     )
                     Column(Modifier.weight(1f)) {
-                        Text(story.title, style = style(sizes.title, theme.text, bold = true), maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        Text(story.title, style = style(sizes.title, theme.text, bold = true, shadow = storyShadow), maxLines = 2, overflow = TextOverflow.Ellipsis)
                         Text(
                             story.meta(),
-                            style = style(sizes.meta, theme.secondary, mono = true),
+                            style = style(sizes.meta, theme.secondary, mono = true, shadow = storyShadow),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.padding(top = 2.dp),
