@@ -1,6 +1,16 @@
 package app.hn2.ui.settings
 
 import androidx.compose.foundation.background
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.material.icons.rounded.RecordVoiceOver
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.hn2.settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -42,10 +52,26 @@ import app.hn2.account
 import app.hn2.ui.account.LoginDialog
 import app.hn2.ui.account.signedInUser
 
-@OptIn(ExperimentalMaterial3Api::class)
+/** The Settings overview and its sub-pages. */
 @Composable
 fun SettingsScreen(onBack: () -> Unit) {
-    val account = LocalContext.current.account
+    var page by rememberSaveable { mutableStateOf(SettingsPage.OVERVIEW) }
+    BackHandler(enabled = page != SettingsPage.OVERVIEW) { page = SettingsPage.OVERVIEW }
+    when (page) {
+        SettingsPage.OVERVIEW -> SettingsOverview(onBack, onOpen = { page = it })
+        SettingsPage.VOICE -> VoiceSettingsScreen(onBack = { page = SettingsPage.OVERVIEW })
+    }
+}
+
+private enum class SettingsPage { OVERVIEW, VOICE }
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SettingsOverview(onBack: () -> Unit, onOpen: (SettingsPage) -> Unit) {
+    val context = LocalContext.current
+    val account = context.account
+    val voice by context.settings.voice.collectAsStateWithLifecycle()
+    val voiceOptions = rememberVoiceOptions(voice.engine)
     val user = signedInUser()
     var showLogin by remember { mutableStateOf(false) }
 
@@ -68,7 +94,16 @@ fun SettingsScreen(onBack: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             AccountHeader(user, onLogIn = { showLogin = true })
-            // Rows for settings sub-pages (Voice, ...) go here.
+            Surface(color = MaterialTheme.colorScheme.surfaceContainer, shape = MaterialTheme.shapes.extraLarge) {
+                Column {
+                    SettingsRow(
+                        icon = Icons.Rounded.RecordVoiceOver,
+                        title = "Voice",
+                        summary = voiceSummary(voice, voiceOptions),
+                        onClick = { onOpen(SettingsPage.VOICE) },
+                    )
+                }
+            }
             if (user != null) {
                 OutlinedButton(
                     onClick = account::logout,
@@ -129,4 +164,16 @@ private fun AccountHeader(user: String?, onLogIn: () -> Unit) {
             if (user == null) Button(onClick = onLogIn) { Text("Log in") }
         }
     }
+}
+
+@Composable
+private fun SettingsRow(icon: ImageVector, title: String, summary: String, onClick: () -> Unit) {
+    ListItem(
+        headlineContent = { Text(title) },
+        supportingContent = { Text(summary) },
+        leadingContent = { Icon(icon, null) },
+        trailingContent = { Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null) },
+        colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+        modifier = Modifier.clickable(onClick = onClick),
+    )
 }

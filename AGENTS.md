@@ -40,6 +40,7 @@ All code is in the single `:app` module, under `app/src/main/java/app/hn2/`:
 | `ui/list/` | `MainActivity` and the story list screen with section chips. |
 | `ui/item/` | `ItemActivity`: the story screen with its collapsing header, the Comments/Article pager, the article WebView, the comments list, the long-press comment actions and the comment box. |
 | `ui/common/`, `ui/theme/` | Shared composables (`Pill`, `ErrorMessage`, `groupedShape`) and the Material You theme. |
+| `listen/` | Reading stories aloud: Readability text extraction (`ArticleText.kt`), speech engines, the Media3 `PlaybackService`, `ListenSession` (shared state) and the `MiniPlayer` bar. |
 | `widget/` | The Glance widget, its stored state, refresh worker, refresh action and configuration activity. |
 | `util/` | Pure helpers: formatting, comment HTML parsing, HN page parsing (`HnPages.kt`), `runSuspendCatching`. |
 
@@ -100,6 +101,13 @@ row flattening, HTML parsing, formatting) out of composables so it stays testabl
   in `util/AdBlock.kt`. CI runs `scripts/update-adhosts.sh` before every build, so each release has
   that day's list; the committed copy is only for local builds and a fallback if the fetch fails.
   EasyList's path, option, exception and element-hiding rules are skipped; they need a filter engine.
+- **Listening is one pipeline for every engine.** The story screen extracts the text (Mozilla's
+  `assets/readability.js`, run on the loaded WebView; Apache-2.0, license in `licenses/`), splits it with
+  `speechChunks` and hands a `ListenRequest` to `ListenSession`. The `MiniPlayer` connects a
+  `MediaController`, which starts `PlaybackService`; the service turns chunks into WAV files a few ahead of
+  playback and plays them with ExoPlayer, so background play, the notification and skipping work the
+  same for every `SpeechEngine`. WAVs live in `cacheDir/listen`, named by a hash of voice and text so
+  replays reuse them; the app deletes ones unused for 3 days at startup (`AudioCache`).
 - **Use `runSuspendCatching`, not `runCatching`, in coroutines.** Plain `runCatching` reports a
   cancelled job as an error.
 - **`ItemActivity` handles its own configuration changes** so rotating doesn't reload the article.

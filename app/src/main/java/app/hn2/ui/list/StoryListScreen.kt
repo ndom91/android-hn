@@ -1,6 +1,7 @@
 package app.hn2.ui.list
 
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -40,6 +41,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import app.hn2.data.Section
 import app.hn2.data.Story
 import app.hn2.repository
+import app.hn2.listen.MiniPlayer
 import app.hn2.ui.settings.SettingsActivity
 import app.hn2.ui.common.ErrorMessage
 import app.hn2.ui.common.Pill
@@ -83,6 +85,7 @@ fun StoryListScreen(initialSection: Section) {
                 SectionChips(state.section, viewModel::select)
             }
         },
+        bottomBar = { MiniPlayer(contentModifier = Modifier.navigationBarsPadding()) },
     ) { padding ->
         PullToRefreshBox(
             isRefreshing = state.loading,

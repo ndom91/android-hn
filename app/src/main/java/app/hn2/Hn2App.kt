@@ -1,9 +1,12 @@
 package app.hn2
 
 import android.app.Application
+import app.hn2.data.AppSettings
 import app.hn2.data.HnAccount
 import app.hn2.data.HnApi
 import app.hn2.data.HnRepository
+import app.hn2.listen.AudioCache
+import app.hn2.listen.ListenSession
 import app.hn2.util.extraAdHosts
 import okhttp3.Cache
 import okhttp3.Dispatcher
@@ -17,6 +20,9 @@ class Hn2App : Application() {
         private set
     lateinit var account: HnAccount
         private set
+    lateinit var settings: AppSettings
+        private set
+    val listen = ListenSession()
 
     // Loaded on first use, which is on the WebView's request thread, not the main thread.
     val adHosts: Set<String> by lazy {
@@ -34,6 +40,9 @@ class Hn2App : Application() {
             .build()
         repository = HnRepository(HnApi(client))
         account = HnAccount(client, getSharedPreferences("account", MODE_PRIVATE))
+        settings = AppSettings(getSharedPreferences("settings", MODE_PRIVATE))
+        // Generated speech is kept a few days so a story can be replayed without regenerating it.
+        Thread { AudioCache.deleteOld(AudioCache.dir(this)) }.start()
     }
 }
 
@@ -45,3 +54,9 @@ val android.content.Context.account: HnAccount
 
 val android.content.Context.adHosts: Set<String>
     get() = (applicationContext as Hn2App).adHosts
+
+val android.content.Context.settings: AppSettings
+    get() = (applicationContext as Hn2App).settings
+
+val android.content.Context.listen: ListenSession
+    get() = (applicationContext as Hn2App).listen

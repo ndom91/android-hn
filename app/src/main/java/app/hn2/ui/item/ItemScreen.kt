@@ -1,9 +1,14 @@
 package app.hn2.ui.item
 
+import android.Manifest
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import android.webkit.WebView
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -40,6 +45,7 @@ import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.rounded.ArrowUpward
 import androidx.compose.material.icons.rounded.Fullscreen
 import androidx.compose.material.icons.rounded.FullscreenExit
+import androidx.compose.material.icons.rounded.Headphones
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.ButtonGroupDefaults
@@ -83,11 +89,16 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.hn2.account
 import app.hn2.data.Section
 import app.hn2.data.Story
+import app.hn2.listen
+import app.hn2.listen.ListenRequest
+import app.hn2.listen.MiniPlayer
+import app.hn2.listen.articleText
 import app.hn2.repository
 import app.hn2.ui.account.LoginDialog
 import app.hn2.ui.account.signedInUser
@@ -98,6 +109,7 @@ import app.hn2.util.hnItemUrl
 import app.hn2.util.isHotScore
 import app.hn2.util.relativeTime
 import app.hn2.util.samePage
+import app.hn2.util.speechChunks
 import kotlinx.coroutines.launch
 
 private const val PAGE_COMMENTS = 0
@@ -167,30 +179,45 @@ private fun StoryContent(
     BackHandler(enabled = onArticle && canGoBack) { webView?.goBack() }
     BackHandler(enabled = fullscreen) { fullscreen = false }
 
-    Box(Modifier.fillMaxSize()) {
-        Column(Modifier.fillMaxSize()) {
-            AnimatedVisibility(visible = !fullscreen) {
-                Header(
-                    story = story,
-                    header = header,
-                    pagerState = pagerState,
-                    onBack = onBack,
-                    shareOptions = shareOptions(story, pageUrl, webView),
-                    score = story.score + state.scoreChange,
-                    voted = state.votes[story.id]?.voted == true,
-                    onVote = { signedIn { viewModel.toggleVote(story.id) } },
-                    onSelectPage = { page -> scope.launch { pagerState.animateScrollToPage(page) } },
-                )
-            }
-            if (fullscreen) Spacer(Modifier.statusBarsPadding())
+    // Text-to-speech asks to show its media notification first; reading starts either way.
+    val notificationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+        scope.launch { startListening(context, story, webView, snackbar) }
+    }
+    val onListen: () -> Unit = {
+        if (Build.VERSION.SDK_INT >= 33 &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            scope.launch { startListening(context, story, webView, snackbar) }
+        }
+    }
+
+    Column(Modifier.fillMaxSize()) {
+        AnimatedVisibility(visible = !fullscreen) {
+            Header(
+                story = story,
+                header = header,
+                pagerState = pagerState,
+                onBack = onBack,
+                shareOptions = shareOptions(story, pageUrl, webView),
+                onListen = onListen,
+                score = story.score + state.scoreChange,
+                voted = state.votes[story.id]?.voted == true,
+                onVote = { signedIn { viewModel.toggleVote(story.id) } },
+                onSelectPage = { page -> scope.launch { pagerState.animateScrollToPage(page) } },
+            )
+        }
+        if (fullscreen) Spacer(Modifier.statusBarsPadding())
+        // The floating buttons and snackbar sit over the pages only, so they stay above the mini player.
+        Box(Modifier.weight(1f)) {
             HorizontalPager(
                 state = pagerState,
                 beyondViewportPageCount = 1,
                 // Over the article, swipes are handled by swipeFromArticle so the page keeps its own gestures.
                 userScrollEnabled = pagerState.settledPage != PAGE_ARTICLE,
                 modifier = Modifier
-                    .weight(1f)
-                    .navigationBarsPadding()
+                    .fillMaxSize()
                     // HorizontalPager only clips sideways; without this a loading WebView paints over the header.
                     .clipToBounds()
                     .nestedScroll(header.nestedScrollConnection)
@@ -209,54 +236,54 @@ private fun StoryContent(
                     PAGE_ARTICLE -> if (webView != null) ArticlePage(webView, progress)
                 }
             }
-        }
 
-        Column(
-            Modifier
-                .align(Alignment.BottomEnd)
-                .navigationBarsPadding()
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            // Commenting belongs to the comments; over the article only fullscreen is offered.
-            AnimatedVisibility(visible = !onArticle, enter = scaleIn() + fadeIn(), exit = scaleOut() + fadeOut()) {
-                FloatingActionButton(
-                    onClick = { signedIn { viewModel.openComposer(null) } },
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                ) {
-                    Icon(Icons.Outlined.AddComment, contentDescription = "Add a comment")
-                }
-            }
-            FloatingActionButton(
-                onClick = {
-                    if (onArticle) {
-                        fullscreen = !fullscreen
-                    } else {
-                        scope.launch { scrollToNextThread(listState, state, story) }
-                    }
-                },
+            Column(
+                Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                val icon = when {
-                    onArticle && fullscreen -> Icons.Rounded.FullscreenExit
-                    onArticle -> Icons.Rounded.Fullscreen
-                    else -> Icons.Rounded.KeyboardArrowDown
+                // Commenting belongs to the comments; over the article only fullscreen is offered.
+                AnimatedVisibility(visible = !onArticle, enter = scaleIn() + fadeIn(), exit = scaleOut() + fadeOut()) {
+                    FloatingActionButton(
+                        onClick = { signedIn { viewModel.openComposer(null) } },
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                    ) {
+                        Icon(Icons.Outlined.AddComment, contentDescription = "Add a comment")
+                    }
                 }
-                AnimatedContent(icon, label = "fab-icon") {
-                    Icon(it, contentDescription = if (onArticle) "Toggle fullscreen" else "Next thread")
+                FloatingActionButton(
+                    onClick = {
+                        if (onArticle) {
+                            fullscreen = !fullscreen
+                        } else {
+                            scope.launch { scrollToNextThread(listState, state, story) }
+                        }
+                    },
+                ) {
+                    val icon = when {
+                        onArticle && fullscreen -> Icons.Rounded.FullscreenExit
+                        onArticle -> Icons.Rounded.Fullscreen
+                        else -> Icons.Rounded.KeyboardArrowDown
+                    }
+                    AnimatedContent(icon, label = "fab-icon") {
+                        Icon(it, contentDescription = if (onArticle) "Toggle fullscreen" else "Next thread")
+                    }
                 }
             }
-        }
 
-        // Beside the buttons, not over them: they're 56dp wide plus a 16dp margin.
-        SnackbarHost(
-            snackbar,
-            Modifier
-                .align(Alignment.BottomStart)
-                .navigationBarsPadding()
-                .padding(end = 72.dp),
-        )
+            // Beside the buttons, not over them: they're 56dp wide plus a 16dp margin.
+            SnackbarHost(
+                snackbar,
+                Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(end = 72.dp),
+            )
+        }
+        MiniPlayer()
+        Spacer(Modifier.navigationBarsPadding())
     }
 
     state.notice?.let { notice ->
@@ -281,6 +308,7 @@ private fun Header(
     pagerState: PagerState,
     onBack: () -> Unit,
     shareOptions: List<ShareOption>,
+    onListen: () -> Unit,
     score: Int,
     voted: Boolean,
     onVote: () -> Unit,
@@ -301,6 +329,7 @@ private fun Header(
                         .weight(1f)
                         .alpha(header.collapsedFraction),
                 )
+                IconButton(onClick = onListen) { Icon(Icons.Rounded.Headphones, "Listen") }
                 ShareButton(shareOptions)
             }
             with(header) {
@@ -393,6 +422,16 @@ private fun ArticlePage(webView: WebView, progress: Int) {
             LinearProgressIndicator(progress = { progress / 100f }, modifier = Modifier.fillMaxWidth())
         }
     }
+}
+
+/** Reads the story's text aloud, or says why it can't. */
+private suspend fun startListening(context: Context, story: Story, webView: WebView?, snackbar: SnackbarHostState) {
+    val text = articleText(story, webView)
+    if (text == null) {
+        snackbar.showSnackbar("Couldn't find any article text to read")
+        return
+    }
+    context.listen.start(ListenRequest(story.id, story.title, listOf(story.title) + speechChunks(text)))
 }
 
 /** One link the Share menu offers. [title] is read when it's shared, since a page's title loads late. */
