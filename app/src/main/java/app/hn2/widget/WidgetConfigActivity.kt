@@ -299,8 +299,8 @@ private fun WidgetPreview(settings: WidgetSettings, stories: List<WidgetStory>) 
     val rankColor = if (settings.orangeRanks) HnOrange else theme.text
     // JetBrains Mono for [mono] text, as the widget's images and meta line use; titles are the
     // phone's font in bold, like the widget's.
-    // Matches the shadow in widget_story_title_shadow.xml (pixels, like the layout's).
-    val storyShadow = if (theme.textShadow) Shadow(Color(0xB3000000), Offset(0f, 1f), 4f) else null
+    // Matches the shadow in widget_story_meta_shadow.xml (pixels, like the layout's).
+    val metaShadow = if (theme.metaShadow) Shadow(Color(0xB3000000), Offset(0f, 1f), 4f) else null
 
     fun style(size: Int, color: Color, mono: Boolean = false, bold: Boolean = false, shadow: Shadow? = null) = TextStyle(
         color = color,
@@ -351,10 +351,10 @@ private fun WidgetPreview(settings: WidgetSettings, stories: List<WidgetStory>) 
                         modifier = Modifier.width((sizes.rank * 1.2f + 10).dp),
                     )
                     Column(Modifier.weight(1f)) {
-                        Text(story.title, style = style(sizes.title, theme.text, bold = true, shadow = storyShadow), maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        Text(story.title, style = style(sizes.title, theme.text, bold = true), maxLines = 2, overflow = TextOverflow.Ellipsis)
                         Text(
                             story.meta(),
-                            style = style(sizes.meta, theme.secondary, mono = true, shadow = storyShadow),
+                            style = style(sizes.meta, theme.secondary, mono = true, shadow = metaShadow),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.padding(top = 2.dp),

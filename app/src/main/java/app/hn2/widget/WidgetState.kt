@@ -56,12 +56,12 @@ enum class WidgetTheme(
     val background: Color,
     val text: Color,
     val secondary: Color,
-    /** Shadow titles and meta lines, for a see-through background over any wallpaper. */
-    val textShadow: Boolean = false,
+    /** Shadow the meta line, for a see-through background over any wallpaper. */
+    val metaShadow: Boolean = false,
 ) {
     DARK("Dark", Color(0xF22A2D30), Color(0xFFF2F2F2), Color(0xFFA0A4A8)),
     // Lighter secondary than Dark: grey loses contrast fast on a see-through background.
-    TRANSPARENT("Transparent", Color(0x66000000), Color(0xFFFFFFFF), Color(0xFFE6E6E6), textShadow = true),
+    TRANSPARENT("Transparent", Color(0x66000000), Color(0xFFFFFFFF), Color(0xFFE6E6E6), metaShadow = true),
     LIGHT("Light", Color(0xF2FFFFFF), Color(0xFF1A1A1A), Color(0xFF666666));
 
     companion object {
