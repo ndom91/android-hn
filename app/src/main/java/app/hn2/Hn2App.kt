@@ -4,6 +4,7 @@ import android.app.Application
 import app.hn2.data.HnAccount
 import app.hn2.data.HnApi
 import app.hn2.data.HnRepository
+import app.hn2.util.extraAdHosts
 import okhttp3.Cache
 import okhttp3.Dispatcher
 import okhttp3.OkHttpClient
@@ -16,6 +17,12 @@ class Hn2App : Application() {
         private set
     lateinit var account: HnAccount
         private set
+
+    // Loaded on first use, which is on the WebView's request thread, not the main thread.
+    val adHosts: Set<String> by lazy {
+        val easyList = assets.open("adhosts.txt").bufferedReader().useLines { it.toHashSet() }
+        easyList + extraAdHosts
+    }
 
     override fun onCreate() {
         super.onCreate()
@@ -35,3 +42,6 @@ val android.content.Context.repository: HnRepository
 
 val android.content.Context.account: HnAccount
     get() = (applicationContext as Hn2App).account
+
+val android.content.Context.adHosts: Set<String>
+    get() = (applicationContext as Hn2App).adHosts

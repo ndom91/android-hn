@@ -52,6 +52,10 @@ jobs:
           sed -i -E "s/versionName = \"[^\"]*\"/versionName = \"$next\"/" app/build.gradle.kts
           grep -q "versionName = \"$next\"" app/build.gradle.kts
 
+      # Each build ships the current EasyList. If easylist.to is down, the committed copy is used.
+      - name: Refresh ad hosts
+        run: ./scripts/update-adhosts.sh || echo "::warning::EasyList fetch failed; using the committed ad host list"
+
       - name: Build and test
         run: ./gradlew assembleDebug testDebugUnitTest --console=plain
         env:
@@ -90,5 +94,5 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -am "Release $VERSION [skip ci]"
+          git commit -m "Release $VERSION [skip ci]" app/build.gradle.kts
           git push origin HEAD:main || echo "main moved on; skipping the version commit"

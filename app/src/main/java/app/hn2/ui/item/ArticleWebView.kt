@@ -11,6 +11,7 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import app.hn2.adHosts
 import app.hn2.util.isAdHost
 
 /**
@@ -52,7 +53,7 @@ fun createArticleWebView(
         // Answer ad and tracker requests with an empty response so the page never loads them.
         // The page itself is never blocked, so a story linking to e.g. a Criteo blog post still opens.
         override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? =
-            if (!request.isForMainFrame && isAdHost(request.url.host.orEmpty())) {
+            if (!request.isForMainFrame && isAdHost(request.url.host.orEmpty(), view.context.adHosts)) {
                 WebResourceResponse("text/plain", "utf-8", null)
             } else {
                 null

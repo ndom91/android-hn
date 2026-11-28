@@ -92,6 +92,11 @@ row flattening, HTML parsing, formatting) out of composables so it stays testabl
   turned off on the article page, and `Modifier.swipeFromArticle` (`ui/item/ArticleSwipe.kt`)
   catches mostly-horizontal drags first and drives the pager. Pages that can scroll sideways
   themselves keep the gesture.
+- **The article WebView blocks ad hosts.** `shouldInterceptRequest` answers requests (never the page
+  itself) to EasyList's plain `||host^` domains, bundled in `assets/adhosts.txt`, plus the trackers
+  in `util/AdBlock.kt`. CI runs `scripts/update-adhosts.sh` before every build, so each release has
+  that day's list; the committed copy is only for local builds and a fallback if the fetch fails.
+  EasyList's path, option, exception and element-hiding rules are skipped; they need a filter engine.
 - **Use `runSuspendCatching`, not `runCatching`, in coroutines.** Plain `runCatching` reports a
   cancelled job as an error.
 - **`ItemActivity` handles its own configuration changes** so rotating doesn't reload the article.

@@ -1,8 +1,8 @@
 package app.hn2.util
 
-// shortcut: a small hand-picked list of the biggest ad and tracker hosts, not EasyList.
-// Swap in a bundled hosts file if too many ads get through.
-private val adHosts = setOf(
+// Trackers and ad hosts to block on top of EasyList's domain rules (assets/adhosts.txt).
+// EasyList leaves analytics to EasyPrivacy, so most of these aren't in it.
+val extraAdHosts = setOf(
     "doubleclick.net",
     "googlesyndication.com",
     "googleadservices.com",
@@ -59,8 +59,8 @@ private val adHosts = setOf(
     "parsely.com",
 )
 
-/** True if [host] or any parent domain of it is a known ad or tracker host. */
-fun isAdHost(host: String): Boolean {
+/** True if [host] or any parent domain of it is in [adHosts]. */
+fun isAdHost(host: String, adHosts: Set<String>): Boolean {
     var h = host.lowercase()
     while (true) {
         if (h in adHosts) return true
