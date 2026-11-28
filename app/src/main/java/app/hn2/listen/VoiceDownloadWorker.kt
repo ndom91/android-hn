@@ -15,6 +15,8 @@ import okhttp3.Request
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream
 import java.io.File
+import java.io.FilterInputStream
+import java.io.InputStream
 import java.io.IOException
 import kotlin.coroutines.coroutineContext
 
@@ -26,70 +28,71 @@ class VoiceDownloadWorker(context: Context, params: WorkerParameters) : Coroutin
 
     override suspend fun doWork(): Result {
         val model = VoiceModel.fromName(inputData.getString(KEY_MODEL)) ?: return Result.failure()
+        val staging = File(VoiceModel.voicesDir(applicationContext), ".staging-${model.archive}")
         return try {
-            download(model)
+            download(model, staging)
             Result.success()
         } catch (e: IOException) {
             Result.failure(workDataOf(KEY_ERROR to (e.message ?: "Download failed")))
         } finally {
-            File(VoiceModel.voicesDir(applicationContext), "${model.archive}.tar.bz2.part").delete()
+            staging.deleteRecursively()
         }
     }
 
-    private suspend fun download(model: VoiceModel) = withContext(Dispatchers.IO) {
-        val voices = VoiceModel.voicesDir(applicationContext).apply { mkdirs() }
-        val archive = File(voices, "${model.archive}.tar.bz2.part")
-        // No cache: a 130 MB response would push everything else out of the app's HTTP cache.
+    /**
+     * Unpacks the archive as it arrives. Unpacking bzip2 takes a minute or two on a phone for Kokoro,
+     * so doing it after the download left the progress bar stuck near the end.
+     */
+    private suspend fun download(model: VoiceModel, staging: File) = withContext(Dispatchers.IO) {
+        staging.deleteRecursively()
+        staging.mkdirs()
+        val root = staging.canonicalFile
+        // No cache: a 300 MB response would push everything else out of the app's HTTP cache.
         val client = applicationContext.http.newBuilder().cache(null).build()
         client.newCall(Request.Builder().url(model.url).build()).execute().use { response ->
             if (!response.isSuccessful) throw IOException("Download failed (HTTP ${response.code})")
             val body = response.body ?: throw IOException("Download failed")
             val total = body.contentLength().takeIf { it > 0 } ?: (model.sizeMb * 1_000_000L)
-            body.byteStream().use { input ->
-                archive.outputStream().use { output ->
-                    val buffer = ByteArray(64 * 1024)
-                    var copied = 0L
-                    var reported = -1
-                    while (true) {
-                        coroutineContext.ensureActive()
-                        val read = input.read(buffer)
-                        if (read < 0) break
-                        output.write(buffer, 0, read)
-                        copied += read
-                        // Most of the time goes to the download; unpacking is the last 10%.
-                        val percent = (copied * 90 / total).toInt()
-                        if (percent != reported) {
-                            reported = percent
-                            setProgress(workDataOf(KEY_PROGRESS to percent / 100f))
+            val received = CountingInputStream(body.byteStream())
+            var reported = -1
+            suspend fun report() {
+                val percent = (received.count * 100 / total).toInt().coerceAtMost(99)
+                if (percent != reported) {
+                    reported = percent
+                    setProgress(workDataOf(KEY_PROGRESS to percent / 100f))
+                }
+            }
+            TarArchiveInputStream(BZip2CompressorInputStream(received.buffered())).use { tar ->
+                val buffer = ByteArray(64 * 1024)
+                while (true) {
+                    coroutineContext.ensureActive()
+                    val entry = tar.nextEntry ?: break
+                    val file = File(staging, entry.name).canonicalFile
+                    // Never write outside the staging folder, whatever the archive says.
+                    if (!file.path.startsWith(root.path + File.separator)) throw IOException("Bad file in download: ${entry.name}")
+                    if (entry.isDirectory) {
+                        file.mkdirs()
+                        continue
+                    }
+                    file.parentFile?.mkdirs()
+                    file.outputStream().use { output ->
+                        while (true) {
+                            coroutineContext.ensureActive()
+                            val read = tar.read(buffer)
+                            if (read < 0) break
+                            output.write(buffer, 0, read)
+                            report()
                         }
                     }
                 }
             }
         }
-        unpack(archive, voices, model)
-    }
-
-    private suspend fun unpack(archive: File, voices: File, model: VoiceModel) {
+        val unpacked = File(staging, model.archive)
+        if (!unpacked.isDirectory) throw IOException("The download didn't contain ${model.archive}")
+        File(unpacked, VoiceModel.INSTALLED_MARKER).createNewFile()
         val target = model.dir(applicationContext)
         target.deleteRecursively()
-        val root = voices.canonicalFile
-        TarArchiveInputStream(BZip2CompressorInputStream(archive.inputStream().buffered())).use { tar ->
-            while (true) {
-                coroutineContext.ensureActive()
-                val entry = tar.nextEntry ?: break
-                val file = File(voices, entry.name).canonicalFile
-                // Never write outside the voices folder, whatever the archive says.
-                if (!file.path.startsWith(root.path + File.separator)) throw IOException("Bad file in download: ${entry.name}")
-                if (entry.isDirectory) {
-                    file.mkdirs()
-                } else {
-                    file.parentFile?.mkdirs()
-                    file.outputStream().use { tar.copyTo(it) }
-                }
-            }
-        }
-        if (!target.isDirectory) throw IOException("The download didn't contain ${model.archive}")
-        File(target, VoiceModel.INSTALLED_MARKER).createNewFile()
+        if (!unpacked.renameTo(target)) throw IOException("Couldn't save the voice")
         setProgress(workDataOf(KEY_PROGRESS to 1f))
     }
 
@@ -111,4 +114,14 @@ class VoiceDownloadWorker(context: Context, params: WorkerParameters) : Coroutin
             WorkManager.getInstance(context).cancelUniqueWork(workName(model))
         }
     }
+}
+
+/** Counts the bytes read through it, to report download progress from inside the unpacking. */
+private class CountingInputStream(input: InputStream) : FilterInputStream(input) {
+    @Volatile var count = 0L
+        private set
+
+    override fun read(): Int = super.read().also { if (it >= 0) count++ }
+
+    override fun read(b: ByteArray, off: Int, len: Int): Int = super.read(b, off, len).also { if (it > 0) count += it }
 }
