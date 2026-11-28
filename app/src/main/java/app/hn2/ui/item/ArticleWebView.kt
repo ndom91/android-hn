@@ -8,8 +8,10 @@ import android.net.Uri
 import android.view.ViewGroup
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import app.hn2.util.isAdHost
 
 /**
  * The article view. It is sized to fill its container and scrolls itself. Materialistic wrapped a
@@ -46,6 +48,15 @@ fun createArticleWebView(
             openExternally(view.context, uri)
             return true
         }
+
+        // Answer ad and tracker requests with an empty response so the page never loads them.
+        // The page itself is never blocked, so a story linking to e.g. a Criteo blog post still opens.
+        override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? =
+            if (!request.isForMainFrame && isAdHost(request.url.host.orEmpty())) {
+                WebResourceResponse("text/plain", "utf-8", null)
+            } else {
+                null
+            }
 
         override fun onPageStarted(view: WebView, url: String?, favicon: Bitmap?) = onProgress(0)
 
