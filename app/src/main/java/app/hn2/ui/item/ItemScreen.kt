@@ -200,7 +200,7 @@ private fun StoryContent(
                 header = header,
                 pagerState = pagerState,
                 onBack = onBack,
-                shareOptions = shareOptions(story, pageUrl, webView),
+                shareOptions = shareOptions(story, pageUrl),
                 onListen = onListen,
                 score = story.score + state.scoreChange,
                 voted = state.votes[story.id]?.voted == true,
@@ -434,20 +434,20 @@ private suspend fun startListening(context: Context, story: Story, webView: WebV
     context.listen.start(ListenRequest(story.id, story.title, listOf(story.title) + speechChunks(text)))
 }
 
-/** One link the Share menu offers. [title] is read when it's shared, since a page's title loads late. */
-private class ShareOption(val label: String, val url: String, val title: () -> String?)
+/** One link the Share menu offers. Only the URL is shared, so it pastes cleanly anywhere. */
+private class ShareOption(val label: String, val url: String)
 
 /**
  * The story's article and its HN discussion, plus the page the article view is on once it has
  * moved somewhere else. Opening a link in a browser goes through the share sheet too.
  */
-private fun shareOptions(story: Story, pageUrl: String?, webView: WebView?): List<ShareOption> = buildList {
+private fun shareOptions(story: Story, pageUrl: String?): List<ShareOption> = buildList {
     val articleUrl = story.url
     if (pageUrl != null && articleUrl != null && !samePage(pageUrl, articleUrl)) {
-        add(ShareOption("This page", pageUrl) { webView?.title?.takeIf { it.isNotBlank() } })
+        add(ShareOption("This page", pageUrl))
     }
-    if (articleUrl != null) add(ShareOption("Original article", articleUrl) { story.title })
-    add(ShareOption("HN discussion", hnItemUrl(story.id)) { story.title })
+    if (articleUrl != null) add(ShareOption("Original article", articleUrl))
+    add(ShareOption("HN discussion", hnItemUrl(story.id)))
 }
 
 /** Shares straight away when there's only one link (text posts), and otherwise asks which. */
@@ -472,7 +472,6 @@ private fun ShareButton(options: List<ShareOption>) {
 }
 
 private fun share(context: Context, option: ShareOption) {
-    val text = listOfNotNull(option.title(), option.url).joinToString("\n")
-    val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text)
+    val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, option.url)
     context.startActivity(Intent.createChooser(send, null))
 }
