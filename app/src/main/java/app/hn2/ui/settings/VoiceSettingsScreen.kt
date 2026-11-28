@@ -3,6 +3,13 @@ package app.hn2.ui.settings
 import android.content.Context
 import android.media.MediaPlayer
 import androidx.compose.foundation.layout.Arrangement
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Button
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.Download
@@ -12,6 +19,9 @@ import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import app.hn2.listen.VoiceDownloadWorker
 import app.hn2.listen.VoiceModel
+import app.hn2.listen.fallbackAfterDeleting
+import app.hn2.listen.isUsing
+import app.hn2.listen.models
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -70,12 +80,14 @@ import java.io.File
 fun VoiceSettingsScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val settings = context.settings
+    val scope = rememberCoroutineScope()
     val voice by settings.voice.collectAsStateWithLifecycle()
     var deletions by remember { mutableIntStateOf(0) }
     val downloads = VoiceModel.entries.associateWith { rememberDownloadState(it, deletions) }
     // Reload the voice list whenever a download finishes or is deleted.
     val installed = downloads.filterValues { it == DownloadState.Installed }.keys
     val options = rememberVoiceOptions(voice.engine, installed)
+    var confirmDelete by remember { mutableStateOf<VoiceModel?>(null) }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surface,
@@ -92,44 +104,35 @@ fun VoiceSettingsScreen(onBack: () -> Unit) {
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
-                .padding(vertical = 8.dp),
+                .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             SectionLabel("Engine")
-            VoiceEngine.entries.forEach { engine ->
-                ListItem(
-                    headlineContent = { Text(engine.label) },
-                    supportingContent = { Text(engine.description) },
-                    leadingContent = { RadioButton(selected = engine == voice.engine, onClick = null) },
-                    colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surface),
-                    modifier = Modifier.selectable(
-                        selected = engine == voice.engine,
-                        role = Role.RadioButton,
-                        onClick = { settings.setVoiceEngine(engine) },
-                    ),
-                )
-            }
-
-            val models = VoiceModel.entries.filter { it.engine == voice.engine }
-            if (models.isNotEmpty()) {
-                SectionLabel("Downloads")
-                models.forEach { model ->
-                    DownloadRow(model, downloads.getValue(model), onDelete = {
-                        model.delete(context)
-                        deletions++
-                    })
+            SettingsCard {
+                VoiceEngine.entries.forEach { engine ->
+                    val ready = engine.models.isEmpty() || engine.models.any { it in installed }
+                    ListItem(
+                        headlineContent = { Text(engine.label) },
+                        supportingContent = { Text(engine.description) },
+                        leadingContent = { RadioButton(selected = engine == voice.engine, onClick = null) },
+                        trailingContent = if (ready) null else {
+                            { Text("Not downloaded", style = MaterialTheme.typography.labelMedium) }
+                        },
+                        colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                        modifier = Modifier.selectable(
+                            selected = engine == voice.engine,
+                            role = Role.RadioButton,
+                            onClick = { settings.setVoiceEngine(engine) },
+                        ),
+                    )
                 }
             }
 
             SectionLabel("Voice")
-            Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                if (models.isNotEmpty() && options?.isEmpty() == true) {
-                    Text(
-                        "Download a voice above to use ${voice.engine.label}.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+            val missing = voice.engine.models.isNotEmpty() && voice.engine.models.none { it in installed }
+            if (missing) {
+                MissingVoiceCard(voice.engine, downloads)
+            } else {
                 VoicePicker(
                     options = options,
                     selected = voice.voice,
@@ -137,16 +140,122 @@ fun VoiceSettingsScreen(onBack: () -> Unit) {
                 )
                 PreviewButton(voice)
             }
+
+            SectionLabel("Downloads")
+            SettingsCard {
+                listOf(VoiceEngine.PIPER, VoiceEngine.KOKORO).forEach { engine ->
+                    Text(
+                        engine.label,
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(start = 16.dp, top = 12.dp),
+                    )
+                    engine.models.forEach { model ->
+                        DownloadRow(
+                            model = model,
+                            state = downloads.getValue(model),
+                            inUse = voice.isUsing(model, installed),
+                            onDelete = { confirmDelete = model },
+                        )
+                    }
+                }
+            }
+            StorageUsed(installed)
         }
+    }
+
+    confirmDelete?.let { model ->
+        AlertDialog(
+            onDismissRequest = { confirmDelete = null },
+            title = { Text("Delete ${model.label.substringBefore(" ·")}?") },
+            text = {
+                Text(
+                    if (voice.isUsing(model, installed)) {
+                        "Articles are read with this voice now. Without it, hn2 switches to " +
+                            "${fallbackAfterDeleting(model, installed).label}. You can download it again later (${model.sizeMb} MB)."
+                    } else {
+                        "This frees ${model.sizeMb} MB. You can download it again later."
+                    },
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmDelete = null
+                    if (voice.voices[model.engine] == model.name) settings.setVoice(model.engine, null)
+                    if (voice.engine == model.engine) settings.setVoiceEngine(fallbackAfterDeleting(model, installed))
+                    scope.launch {
+                        withContext(Dispatchers.IO) { model.delete(context) }
+                        deletions++
+                    }
+                }) { Text("Delete") }
+            },
+            dismissButton = { TextButton(onClick = { confirmDelete = null }) { Text("Cancel") } },
+        )
     }
 }
 
 private val VoiceEngine.description: String
     get() = when (this) {
-        VoiceEngine.SYSTEM -> "Your phone's text-to-speech voices. Nothing to download."
-        VoiceEngine.PIPER -> "Natural voices that run on your phone, about 21 MB each. Quick on most phones."
-        VoiceEngine.KOKORO -> "The most natural voices. A 333 MB download, and slower on older phones."
+        VoiceEngine.SYSTEM -> "Your phone's built-in voices. Nothing to download."
+        VoiceEngine.PIPER -> "Natural voices that run on your phone, about 21 MB each. Quick on any phone."
+        VoiceEngine.KOKORO -> "The most natural voices. One 333 MB download, best on recent phones."
     }
+
+@Composable
+private fun SettingsCard(content: @Composable () -> Unit) {
+    Surface(color = MaterialTheme.colorScheme.surfaceContainer, shape = MaterialTheme.shapes.extraLarge) {
+        Column(Modifier.padding(vertical = 4.dp)) { content() }
+    }
+}
+
+/** Shown instead of the voice picker when the chosen engine has nothing downloaded yet. */
+@Composable
+private fun MissingVoiceCard(engine: VoiceEngine, downloads: Map<VoiceModel, DownloadState>) {
+    val context = LocalContext.current
+    val first = engine.models.first()
+    val downloading = engine.models.any { downloads[it] is DownloadState.Downloading }
+    Surface(color = MaterialTheme.colorScheme.secondaryContainer, shape = MaterialTheme.shapes.extraLarge) {
+        Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text(
+                when {
+                    downloading -> "${engine.label} is downloading. You can leave this screen; it carries on."
+                    engine.models.size > 1 -> "${engine.label} needs a voice. Download one below, or start with ${first.label.substringBefore(" ·")}."
+                    else -> "${engine.label} needs a one-time download of ${first.sizeMb} MB."
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+            )
+            if (!downloading) {
+                Button(onClick = { VoiceDownloadWorker.start(context, first) }) {
+                    Icon(Icons.Rounded.Download, null, Modifier.size(18.dp))
+                    Text(
+                        if (engine.models.size > 1) "Download ${first.label.substringBefore(" ·")} (${first.sizeMb} MB)" else "Download (${first.sizeMb} MB)",
+                        Modifier.padding(start = 8.dp),
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** How much space downloaded voices take, measured from the files. */
+@Composable
+private fun StorageUsed(installed: Set<VoiceModel>) {
+    val context = LocalContext.current
+    val bytes by produceState(0L, installed) {
+        value = withContext(Dispatchers.IO) {
+            installed.sumOf { model -> model.dir(context).walkTopDown().filter { it.isFile }.sumOf { it.length() } }
+        }
+    }
+    if (installed.isNotEmpty() && bytes > 0) {
+        Text(
+            "Downloaded voices use ${bytes / 1_000_000} MB on this phone.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 16.dp),
+        )
+    }
+}
 
 private sealed interface DownloadState {
     data object NotDownloaded : DownloadState
@@ -177,7 +286,7 @@ private fun rememberDownloadState(model: VoiceModel, deletions: Int): DownloadSt
 }
 
 @Composable
-private fun DownloadRow(model: VoiceModel, state: DownloadState, onDelete: () -> Unit) {
+private fun DownloadRow(model: VoiceModel, state: DownloadState, inUse: Boolean, onDelete: () -> Unit) {
     val context = LocalContext.current
     ListItem(
         headlineContent = { Text(model.label) },
@@ -189,14 +298,21 @@ private fun DownloadRow(model: VoiceModel, state: DownloadState, onDelete: () ->
                     LinearProgressIndicator(progress = { state.progress }, modifier = Modifier.fillMaxWidth())
                 }
                 is DownloadState.Failed -> Text(state.message, color = MaterialTheme.colorScheme.error)
-                DownloadState.Installed -> Text("Downloaded · ${model.sizeMb} MB")
+                DownloadState.Installed -> Text(
+                    if (inUse) "In use · ${model.sizeMb} MB" else "Downloaded · ${model.sizeMb} MB",
+                    color = if (inUse) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         },
         trailingContent = {
             when (state) {
-                DownloadState.NotDownloaded, is DownloadState.Failed ->
+                DownloadState.NotDownloaded ->
                     IconButton(onClick = { VoiceDownloadWorker.start(context, model) }) {
                         Icon(Icons.Rounded.Download, "Download ${model.label}")
+                    }
+                is DownloadState.Failed ->
+                    IconButton(onClick = { VoiceDownloadWorker.start(context, model) }) {
+                        Icon(Icons.Rounded.Refresh, "Retry downloading ${model.label}")
                     }
                 is DownloadState.Downloading ->
                     IconButton(onClick = { VoiceDownloadWorker.cancel(context, model) }) {
@@ -206,7 +322,7 @@ private fun DownloadRow(model: VoiceModel, state: DownloadState, onDelete: () ->
                     IconButton(onClick = onDelete) { Icon(Icons.Rounded.DeleteOutline, "Delete ${model.label}") }
             }
         },
-        colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surface),
+        colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
     )
 }
 
@@ -216,7 +332,7 @@ private fun SectionLabel(text: String) {
         text,
         style = MaterialTheme.typography.titleSmall,
         color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp),
+        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 4.dp),
     )
 }
 

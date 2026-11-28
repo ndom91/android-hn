@@ -2,6 +2,7 @@ package app.hn2.listen
 
 import android.content.Context
 import app.hn2.data.VoiceEngine
+import app.hn2.data.VoiceSettings
 import java.io.File
 
 /**
@@ -36,6 +37,22 @@ enum class VoiceModel(val engine: VoiceEngine, val archive: String, val label: S
         val RETIRED_ARCHIVES = listOf("kokoro-int8-multi-lang-v1_0")
     }
 }
+
+/** The downloads [this] engine can use; none for the phone's own voices. */
+val VoiceEngine.models get() = VoiceModel.entries.filter { it.engine == this }
+
+/** True if articles are read with [model] right now: its engine is chosen and it's the voice in use. */
+fun VoiceSettings.isUsing(model: VoiceModel, installed: Set<VoiceModel>): Boolean {
+    if (engine != model.engine || model !in installed) return false
+    if (engine == VoiceEngine.KOKORO) return true
+    // Piper with no voice chosen uses the first one downloaded.
+    val chosen = VoiceModel.fromName(voice)?.takeIf { it in installed } ?: engine.models.firstOrNull { it in installed }
+    return chosen == model
+}
+
+/** The engine to use once [model] is gone: the same one if it still has a voice, otherwise the phone's own. */
+fun fallbackAfterDeleting(model: VoiceModel, installed: Set<VoiceModel>): VoiceEngine =
+    if (model.engine.models.any { it != model && it in installed }) model.engine else VoiceEngine.SYSTEM
 
 /**
  * Kokoro v1.0's English speakers, by speaker id. The prefix says the accent and voice:
