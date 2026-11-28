@@ -29,4 +29,14 @@ class SentencesTest {
     fun `normalizes whitespace and drops blank lines`() {
         assertEquals("a b\nc", normalizeArticleText("  a \t b \n\n  \n  c  "))
     }
+
+    @Test
+    fun `chunks start short and grow`() {
+        val text = (1..40).joinToString(" ") { "Sentence number $it is here." }
+        val sizes = speechChunks(text, maxChars = 300, firstMaxChars = 60, locale = Locale.US).map { it.length }
+        assertTrue(sizes[0] <= 60)
+        assertTrue(sizes[1] in 61..120)
+        assertTrue(sizes[2] in 121..240)
+        assertTrue(sizes.drop(3).dropLast(1).all { it in 241..300 })
+    }
 }

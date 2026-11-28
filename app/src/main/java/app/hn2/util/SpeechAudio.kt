@@ -10,7 +10,7 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 
 /**
- * Kokoro's int8 model has a sizzly top end that phone speakers make scratchy, and it comes out about
+ * Kokoro has a sizzly top end that phone speakers make scratchy, and it comes out about
  * 4 dB quieter than other voices. This turns everything above about 6 kHz down by 6 dB, then
  * boosts the whole thing by 6 dB. The boost is fixed rather than normalized per chunk, so the volume
  * doesn't jump from sentence to sentence; Kokoro peaks well under half of full scale, so rare

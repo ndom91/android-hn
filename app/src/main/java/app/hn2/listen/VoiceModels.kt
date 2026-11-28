@@ -12,7 +12,9 @@ enum class VoiceModel(val engine: VoiceEngine, val archive: String, val label: S
     PIPER_LESSAC(VoiceEngine.PIPER, "vits-piper-en_US-lessac-medium-int8", "Lessac · US English", 21),
     PIPER_AMY(VoiceEngine.PIPER, "vits-piper-en_US-amy-medium-int8", "Amy · US English", 21),
     PIPER_RYAN(VoiceEngine.PIPER, "vits-piper-en_US-ryan-medium-int8", "Ryan · US English", 21),
-    KOKORO(VoiceEngine.KOKORO, "kokoro-int8-multi-lang-v1_0", "Kokoro · 28 English voices", 132);
+    // Full precision, not int8: on ARM, ONNX Runtime runs it about twice as fast with 4 threads, and
+    // the int8 model sounds metallic.
+    KOKORO(VoiceEngine.KOKORO, "kokoro-multi-lang-v1_0", "Kokoro · 28 English voices", 333);
 
     val url get() = "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/$archive.tar.bz2"
 
@@ -29,6 +31,9 @@ enum class VoiceModel(val engine: VoiceEngine, val archive: String, val label: S
         fun voicesDir(context: Context) = File(context.filesDir, "voices")
 
         fun fromName(name: String?): VoiceModel? = entries.firstOrNull { it.name == name }
+
+        /** Downloads of voices the app no longer uses, deleted at startup. */
+        val RETIRED_ARCHIVES = listOf("kokoro-int8-multi-lang-v1_0")
     }
 }
 

@@ -145,7 +145,7 @@ private val VoiceEngine.description: String
     get() = when (this) {
         VoiceEngine.SYSTEM -> "Your phone's text-to-speech voices. Nothing to download."
         VoiceEngine.PIPER -> "Natural voices that run on your phone, about 21 MB each. Quick on most phones."
-        VoiceEngine.KOKORO -> "The most natural voices. A 132 MB download, and slower on older phones."
+        VoiceEngine.KOKORO -> "The most natural voices. A 333 MB download, and slower on older phones."
     }
 
 private sealed interface DownloadState {

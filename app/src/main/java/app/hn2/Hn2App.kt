@@ -7,6 +7,7 @@ import app.hn2.data.HnApi
 import app.hn2.data.HnRepository
 import app.hn2.listen.AudioCache
 import app.hn2.listen.ListenSession
+import app.hn2.listen.VoiceModel
 import app.hn2.util.extraAdHosts
 import okhttp3.Cache
 import okhttp3.Dispatcher
@@ -46,7 +47,10 @@ class Hn2App : Application() {
         account = HnAccount(client, getSharedPreferences("account", MODE_PRIVATE))
         settings = AppSettings(getSharedPreferences("settings", MODE_PRIVATE))
         // Generated speech is kept a few days so a story can be replayed without regenerating it.
-        Thread { AudioCache.deleteOld(AudioCache.dir(this)) }.start()
+        Thread {
+            AudioCache.deleteOld(AudioCache.dir(this))
+            VoiceModel.RETIRED_ARCHIVES.forEach { File(VoiceModel.voicesDir(this), it).deleteRecursively() }
+        }.start()
     }
 }
 

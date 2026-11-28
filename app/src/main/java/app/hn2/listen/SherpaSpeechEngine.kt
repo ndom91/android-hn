@@ -90,7 +90,7 @@ class SherpaSpeechEngine private constructor(
             val config = OfflineTtsConfig(
                 model = OfflineTtsModelConfig(
                     kokoro = OfflineTtsKokoroModelConfig(
-                        model = File(dir, "model.int8.onnx").path,
+                        model = File(dir, "model.onnx").path,
                         voices = File(dir, "voices.bin").path,
                         tokens = File(dir, "tokens.txt").path,
                         dataDir = File(dir, "espeak-ng-data").path,
@@ -99,7 +99,7 @@ class SherpaSpeechEngine private constructor(
                     numThreads = threads(),
                 ),
             )
-            return SherpaSpeechEngine(OfflineTts(config = config), speaker, "kokoro-soft:$speaker", soften = true)
+            return SherpaSpeechEngine(OfflineTts(config = config), speaker, "${model.archive}:$speaker", soften = true)
         }
 
         // af_heart, Kokoro's best-rated English voice.

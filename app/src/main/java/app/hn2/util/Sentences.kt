@@ -5,11 +5,21 @@ import java.util.Locale
 
 /**
  * Splits text into chunks for text-to-speech: whole sentences, merged up to [maxChars] so each
- * chunk is a natural pause point. Paragraphs never share a chunk. A sentence longer than [maxChars]
+ * chunk is a natural pause point. Paragraphs never share a chunk. A sentence longer than the limit
  * is split between words, since engines slow down or refuse very long input.
+ *
+ * The limit starts at [firstMaxChars] and doubles with each chunk up to [maxChars]: playback can
+ * start as soon as the short first chunk is ready, and each chunk is generated while the shorter
+ * one before it plays.
  */
-fun speechChunks(text: String, maxChars: Int = 300, locale: Locale = Locale.getDefault()): List<String> {
+fun speechChunks(
+    text: String,
+    maxChars: Int = 300,
+    firstMaxChars: Int = 60,
+    locale: Locale = Locale.getDefault(),
+): List<String> {
     val chunks = mutableListOf<String>()
+    fun limit() = (firstMaxChars.toLong() shl chunks.size.coerceAtMost(16)).coerceAtMost(maxChars.toLong()).toInt()
     for (paragraph in text.split('\n')) {
         val current = StringBuilder()
         fun flush() {
@@ -17,8 +27,8 @@ fun speechChunks(text: String, maxChars: Int = 300, locale: Locale = Locale.getD
             current.clear()
         }
         for (sentence in sentences(paragraph, locale)) {
-            for (piece in splitLong(sentence, maxChars)) {
-                if (current.isNotEmpty() && current.length + 1 + piece.length > maxChars) flush()
+            for (piece in splitLong(sentence, limit())) {
+                if (current.isNotEmpty() && current.length + 1 + piece.length > limit()) flush()
                 if (current.isNotEmpty()) current.append(' ')
                 current.append(piece)
             }
